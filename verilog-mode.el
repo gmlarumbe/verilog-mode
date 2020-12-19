@@ -3838,16 +3838,16 @@ Use filename, if current buffer being edited shorten to just buffer name."
         ;; Search forward for matching endtask
         (setq reg "\\<endtask\\>" )
         (setq nest 'no))
-       ((match-end 12)
+       ((match-end 13)
         ;; Search forward for matching endgenerate
         (setq reg "\\(\\<generate\\>\\)\\|\\(\\<endgenerate\\>\\)" ))
-       ((match-end 13)
+       ((match-end 14)
         ;; Search forward for matching endgroup
         (setq reg "\\(\\<covergroup\\>\\)\\|\\(\\<endgroup\\>\\)" ))
-       ((match-end 14)
+       ((match-end 15)
         ;; Search forward for matching endproperty
         (setq reg "\\(\\<property\\>\\)\\|\\(\\<endproperty\\>\\)" ))
-       ((match-end 15)
+       ((match-end 16)
         ;; Search forward for matching endsequence
         (setq reg "\\(\\<\\(rand\\)?sequence\\>\\)\\|\\(\\<endsequence\\>\\)" )
         (setq md 3)) ; 3 to get to endsequence in the reg above
@@ -6168,7 +6168,13 @@ Jump from end to matching begin, from endcase to matching case, and so on."
       (setq reg "\\(\\<\\(rand\\)?sequence\\>\\)\\|\\(\\<endsequence\\>\\)" ))
      ((looking-at "\\<endclocking\\>")
       ;; 12: Search back for matching clocking
-      (setq reg "\\(\\<clocking\\)\\|\\(\\<endclocking\\>\\)" )))
+      (setq reg "\\(\\<clocking\\)\\|\\(\\<endclocking\\>\\)" ))
+     ;; Search back for matching package
+     ((looking-at "\\<endpackage\\>")
+      (setq reg "\\(\\<package\\>\\)" ))
+     ;; Search back for matching program
+     ((looking-at "\\<endprogram\\>")
+      (setq reg "\\(\\<program\\>\\)" )))
     (if reg
 	(catch 'skip
 	  (if (eq nesting 'yes)
