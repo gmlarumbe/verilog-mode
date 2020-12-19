@@ -3637,37 +3637,7 @@ Use filename, if current buffer being edited shorten to just buffer name."
      ((looking-at verilog-end-block-re)
       (verilog-leap-to-head))
 
-     ;; DANGER: Modified by Larumbe for hideshow customization
-     ;; Original code:
-     ;; ((looking-at "\\(endmodule\\>\\)\\|\\(\\<endprimitive\\>\\)\\|\\(\\<endclass\\>\\)\\|\\(\\<endprogram\\>\\)\\|\\(\\<endinterface\\>\\)\\|\\(\\<endpackage\\>\\)\\|\\(\\<endconnectmodule\\>\\)")
-     ;;  (cond
-     ;;   ((match-end 1)
-     ;;    (verilog-re-search-backward "\\<\\(macro\\)?module\\>" nil 'move))
-     ;;   ((match-end 2)
-     ;;    (verilog-re-search-backward "\\<primitive\\>" nil 'move))
-     ;;   ((match-end 3)
-     ;;    (verilog-re-search-backward "\\<class\\>" nil 'move))
-     ;;   ((match-end 4)
-     ;;    (verilog-re-search-backward "\\<program\\>" nil 'move))
-     ;;   ((match-end 5)
-     ;;    (verilog-re-search-backward "\\<interface\\>" nil 'move))
-     ;;   ((match-end 6)
-     ;;    (verilog-re-search-backward "\\<package\\>" nil 'move))
-     ;;   ((match-end 7)
-     ;;   (verilog-re-search-backward "\\<connectmodule\\>" nil 'move))
-
-     ;; Tweaked code
-     ((looking-at (concat
-                   "\\(?1:endmodule\\>\\)\\|"
-                   "\\(?2:\\<endprimitive\\>\\)\\|"
-                   "\\(?3:\\<endclass\\>\\)\\|"
-                   "\\(?4:\\<endprogram\\>\\)\\|"
-                   "\\(?5:\\<endinterface\\>\\)\\|"
-                   "\\(?6:\\<endpackage\\>\\)\\|"
-                   "\\(?7:\\<endconnectmodule\\>\\)\\|"
-                   "\\(?8:\\<endchecker\\>\\)\\|"
-                   "\\(?9:\\<endconfig\\>\\)"
-                   ))
+     ((looking-at "\\(endmodule\\>\\)\\|\\(\\<endprimitive\\>\\)\\|\\(\\<endclass\\>\\)\\|\\(\\<endprogram\\>\\)\\|\\(\\<endinterface\\>\\)\\|\\(\\<endpackage\\>\\)\\|\\(\\<endconnectmodule\\>\\)")
       (cond
        ((match-end 1)
         (verilog-re-search-backward "\\<\\(macro\\)?module\\>" nil 'move))
@@ -3682,13 +3652,7 @@ Use filename, if current buffer being edited shorten to just buffer name."
        ((match-end 6)
         (verilog-re-search-backward "\\<package\\>" nil 'move))
        ((match-end 7)
-        (verilog-re-search-backward "\\<connectmodule\\>" nil 'move))
-       ((match-end 8)
-        (verilog-re-search-backward "\\<checker\\>" nil 'move))
-       ((match-end 9)
-        (verilog-re-search-backward "\\<config\\>" nil 'move))
-       ;; End of DANGER
-
+       (verilog-re-search-backward "\\<connectmodule\\>" nil 'move))
        (t
         (goto-char st)
         (backward-sexp 1))))
@@ -3812,45 +3776,14 @@ Use filename, if current buffer being edited shorten to just buffer name."
               (if (verilog-re-search-forward reg nil 'move)
                   (throw 'skip 1))))))
 
-     ;; DANGER:
-     ;; Original code
-     ;; ((looking-at (concat
-     ;;               "\\(\\<\\(macro\\)?module\\>\\)\\|"
-     ;;               "\\(\\<primitive\\>\\)\\|"
-     ;;               "\\(\\<class\\>\\)\\|"
-     ;;               "\\(\\<program\\>\\)\\|"
-     ;;               "\\(\\<interface\\>\\)\\|"
-     ;;              "\\(\\<package\\>\\)\\|"
-     ;;              "\\(\\<connectmodule\\>\\)"))
-     ;;  (cond
-     ;;   ((match-end 1)
-     ;;    (verilog-re-search-forward "\\<endmodule\\>" nil 'move))
-     ;;   ((match-end 2)
-     ;;    (verilog-re-search-forward "\\<endprimitive\\>" nil 'move))
-     ;;   ((match-end 3)
-     ;;    (verilog-re-search-forward "\\<endclass\\>" nil 'move))
-     ;;   ((match-end 4)
-     ;;    (verilog-re-search-forward "\\<endprogram\\>" nil 'move))
-     ;;   ((match-end 5)
-     ;;    (verilog-re-search-forward "\\<endinterface\\>" nil 'move))
-     ;;   ((match-end 6)
-     ;;    (verilog-re-search-forward "\\<endpackage\\>" nil 'move))
-     ;;   ((match-end 7)
-     ;;   (verilog-re-search-forward "\\<endconnectmodule\\>" nil 'move))
-
-     ;; Modified code
      ((looking-at (concat
-                   "\\(?1:\\<\\(macro\\)?module\\>\\)\\|"
-                   "\\(?2:\\<primitive\\>\\)\\|"
-                   "\\(?3:\\<class\\>\\)\\|"
-                   "\\(?4:\\<program\\>\\)\\|"
-                   "\\(?5:\\<interface\\>\\)\\|"
-                   "\\(?6:\\<package\\>\\)\\|"
-                   "\\(?7:\\<connectmodule\\>\\)\\|"
-                   "\\(?8:\\<generate\\>\\)\\|"
-                   "\\(?9:\\<checker\\>\\)\\|"
-                   "\\(?10:\\<config\\>\\)"
-                   ))
+                   "\\(\\<\\(macro\\)?module\\>\\)\\|"
+                   "\\(\\<primitive\\>\\)\\|"
+                   "\\(\\<class\\>\\)\\|"
+                   "\\(\\<program\\>\\)\\|"
+                   "\\(\\<interface\\>\\)\\|"
+                  "\\(\\<package\\>\\)\\|"
+                  "\\(\\<connectmodule\\>\\)"))
       (cond
        ((match-end 1)
         (verilog-re-search-forward "\\<endmodule\\>" nil 'move))
@@ -3865,15 +3798,7 @@ Use filename, if current buffer being edited shorten to just buffer name."
        ((match-end 6)
         (verilog-re-search-forward "\\<endpackage\\>" nil 'move))
        ((match-end 7)
-        (verilog-re-search-forward "\\<endconnectmodule\\>" nil 'move))
-       ((match-end 8)
-        (verilog-re-search-forward "\\<endgenerate\\>" nil 'move))
-       ((match-end 9)
-        (verilog-re-search-forward "\\<endchecker\\>" nil 'move))
-       ((match-end 10)
-        (verilog-re-search-forward "\\<endconfig\\>" nil 'move))
-     ;; End of DANGER
-
+       (verilog-re-search-forward "\\<endconnectmodule\\>" nil 'move))
        (t
         (goto-char st)
         (if (= (following-char) ?\) )
@@ -4613,34 +4538,6 @@ Uses `verilog-scan' cache."
 ;;        (setq pt (point)))
 ;;      (goto-char pt)
 ;;   ;(verilog-forward-syntactic-ws)
-
-
-;; DANGER: Added by Larumbe (copied from previous one) for the sake of emulating the effect of `verilog-indent-lists'
-(defun verilog-beg-of-statement-2 ()
-  "Move backward to beginning of statement."
-  (interactive)
-  (if (verilog-in-comment-p)
-      (verilog-backward-syntactic-ws))
-  (let ((pt (point)))
-    (catch 'done
-      (while (not (looking-at verilog-defun-level-not-generate-re))
-        (setq pt (point))
-        (verilog-backward-syntactic-ws)
-        (if (or (bolp)
-                (= (preceding-char) ?\;)
-                (progn
-                  (verilog-backward-token)
-                  ;; INFO: Difference with respect to `verilog-beg-of-statement-1'
-                  (or
-                   (looking-at verilog-ends-re)
-                   (looking-at "begin")  ; First instance within generate
-                   ;; End of INFO
-                   )))
-            (progn
-              (goto-char pt)
-              (throw 'done t)))))
-    (verilog-forward-syntactic-ws)))
-;; End of DANGER
 
 
 (defun verilog-end-of-statement ()
@@ -5752,9 +5649,7 @@ Return a list of two elements: (INDENT-TYPE INDENT-LEVEL)."
                    ;; if we are in a parenthesized list, and the user likes to indent these, return.
                    ;; unless we are in the newfangled coverpoint or constraint blocks
                    (if (and
-                        ;; DANGER: Comment to avoid issues when indenting parameters and ports if this parameter is set to nil
-                        ;; verilog-indent-lists
-                        ;; End of DANGER
+                        verilog-indent-lists
                         (verilog-in-paren)
                         (not (verilog-in-coverage-p))
                         )
@@ -6156,12 +6051,12 @@ Jump from end to matching begin, from endcase to matching case, and so on."
      ((looking-at "\\<endclocking\\>")
       ;; 12: Search back for matching clocking
       (setq reg "\\(\\<clocking\\)\\|\\(\\<endclocking\\>\\)" ))
-     ;; DANGER: Added by Larumbe for package/endpackage sexp
+     ;; DANGER: There is a BUG, necessary to add following to do proper `backward-sexp' of these blocks
      ((looking-at "\\<endpackage\\>")
       (setq reg "\\(\\<package\\>\\)" ))
      ((looking-at "\\<endprogram\\>")
       (setq reg "\\(\\<program\\>\\)" ))
-     ;; End of DANGER
+     ;; End of BUG
      )
     (if reg
         (catch 'skip
@@ -6870,27 +6765,14 @@ Only look at a few lines to determine indent level."
      (; handle inside parenthetical expressions
       (eq type 'cparenexp)
       (let* ( here
-              ;; DANGER (instances and parameters/ports alignment)
-              ;; Commented
-              ;; (val (save-excursion
-              ;;        (verilog-backward-up-list 1)
-              ;;        (forward-char 1)
-              ;;        (if verilog-indent-lists
-              ;;            (skip-chars-forward " \t")
-              ;;          (verilog-forward-syntactic-ws))
-              ;;        (setq here (point))
-              ;;        (current-column)))
-
-              ;; New code to indent with `verilog-indent-lists' as `t' as if it was false
-              (close-par (looking-at ")"))
               (val (save-excursion
                      (verilog-backward-up-list 1)
-                     (verilog-beg-of-statement-2)
+                     (forward-char 1)
+                     (if verilog-indent-lists
+                         (skip-chars-forward " \t")
+                       (verilog-forward-syntactic-ws))
                      (setq here (point))
-                     (if close-par
-                         (current-column)
-                       (+ (current-column) verilog-indent-level))))
-              ;; End of DANGER
+                     (current-column)))
 
               (decl (save-excursion
                       (goto-char here)
