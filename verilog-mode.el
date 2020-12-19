@@ -2780,13 +2780,6 @@ find the errors."
        "struct" "union"
        ;; builtin classes
        "mailbox" "semaphore"
-       ;; DANGER: Add LFP SV interface port declarations for auto-alignment with `verilog-pretty-declarations'
-       "reg_bus_if.slave" "reg_bus_if.master"
-       "axi4_lite_if.slave" "axi4_lite_if.master"
-       "axi_full_if.master_mp" "axi_full_if.slave_mp"
-       "axi_stream_if.master_mp" "axi_stream_if.slave_mp"
-       "pbi_if.pbi_mp" "pbi_if.ser_mp"
-       ;; End of DANGER
        ))))
 (defconst verilog-declaration-re
   (concat "\\(" verilog-declaration-prefix-re "\\s-*\\)?" verilog-declaration-core-re))
@@ -2816,22 +2809,8 @@ find the errors."
   (eval-when-compile (verilog-regexp-words '("macromodule" "connectmodule" "module" "class" "program" "interface" "package" "primitive" "config"))))
 (defconst verilog-end-defun-re
   (eval-when-compile (verilog-regexp-words '("endconnectmodule" "endmodule" "endclass" "endprogram" "endinterface" "endpackage" "endprimitive" "endconfig"))))
-;; DANGER: Modify zero-indent words to exclude 'class' since they will normally be declared within packages.
-;; Commented
-;; (defconst verilog-zero-indent-re
-;;   (concat verilog-defun-re "\\|" verilog-end-defun-re))
-;; End of commented
-
-;; Own code (same as before but excluding 'class' and 'endclass')
-(defconst larumbe/verilog-zero-indent-defun-re
-  (eval-when-compile (verilog-regexp-words '("macromodule" "connectmodule" "module" "program" "interface" "package" "primitive" "config"))))
-
-(defconst larumbe/verilog-zero-indent-end-defun-re
-  (eval-when-compile (verilog-regexp-words '("endconnectmodule" "endmodule" "endprogram" "endinterface" "endpackage" "endprimitive" "endconfig"))))
-
 (defconst verilog-zero-indent-re
-  (concat larumbe/verilog-zero-indent-defun-re "\\|" larumbe/verilog-zero-indent-end-defun-re))
-;; End of DANGER
+  (concat verilog-defun-re "\\|" verilog-end-defun-re))
 
 (defconst verilog-inst-comment-re
   (eval-when-compile (verilog-regexp-words '("Outputs" "Inouts" "Inputs" "Interfaces" "Interfaced"))))
@@ -6056,7 +6035,7 @@ Jump from end to matching begin, from endcase to matching case, and so on."
       (setq reg "\\(\\<package\\>\\)" ))
      ((looking-at "\\<endprogram\\>")
       (setq reg "\\(\\<program\\>\\)" ))
-     ;; End of BUG
+     ;; End of DANGER
      )
     (if reg
         (catch 'skip
