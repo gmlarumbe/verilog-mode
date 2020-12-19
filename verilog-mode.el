@@ -1439,11 +1439,6 @@ See also `verilog-case-fold'."
     ("*Types*"      "^\\s-*typedef\\s-+.*\\s-+\\([a-zA-Z_0-9]+\\)\\s-*;" 1))
   "Imenu expression for Verilog mode.  See `imenu-generic-expression'.")
 
-;; DANGER: Own variable for imenu
-(defvar larumbe/verilog-imenu-generic-expression nil
-  "Overriden @ verilog-settings.el")
-;; End of DANGER
-
 ;;
 ;; provide a verilog-header function.
 ;; Customization variables:
@@ -4058,54 +4053,19 @@ Key bindings specific to `verilog-mode-map' are:
     (setq mode-popup-menu (cons "Verilog Mode" verilog-stmt-menu)))
 
   ;; Stuff for GNU Emacs
-  ;; DANGER: Changed font-lock-keywords to be used to the own ones defined @ verilog-settings
-  ;; Commented old code
-  ;; (set (make-local-variable 'font-lock-defaults)
-  ;;      `((verilog-font-lock-keywords
-  ;;         verilog-font-lock-keywords-1
-  ;;         verilog-font-lock-keywords-2
-  ;;         verilog-font-lock-keywords-3)
-  ;;        nil nil nil
-  ;;        ,(if (functionp 'syntax-ppss)
-  ;;             ;; verilog-beg-of-defun uses syntax-ppss, and syntax-ppss uses
-  ;;             ;; font-lock-beginning-of-syntax-function, so
-  ;;             ;; font-lock-beginning-of-syntax-function, can't use
-  ;;             ;; verilog-beg-of-defun.
-  ;;             nil
-  ;;           'verilog-beg-of-defun)))
-
-  ;; Own Code
-  ;; Fontify according to custom variable
-  ;; `larumbe/verilog-use-own-custom-fontify' must be explicitly defined at verilog-settings use-package :init section
-  (when larumbe/verilog-use-own-custom-fontify
-    (set (make-local-variable 'font-lock-defaults)
-         `((larumbe/verilog-font-lock-keywords
-            larumbe/verilog-font-lock-keywords-1
-            larumbe/verilog-font-lock-keywords-2
-            larumbe/verilog-font-lock-keywords-3)
-           nil nil nil
-           ,(if (functionp 'syntax-ppss)
-                ;; verilog-beg-of-defun uses syntax-ppss, and syntax-ppss uses
-                ;; font-lock-beginning-of-syntax-function, so
-                ;; font-lock-beginning-of-syntax-function, can't use
-                ;; verilog-beg-of-defun.
-                nil
-              'verilog-beg-of-defun))))
-  (when (not larumbe/verilog-use-own-custom-fontify)
-    (set (make-local-variable 'font-lock-defaults)
-         `((verilog-font-lock-keywords
-            verilog-font-lock-keywords-1
-            verilog-font-lock-keywords-2
-            verilog-font-lock-keywords-3)
-           nil nil nil
-           ,(if (functionp 'syntax-ppss)
-                ;; verilog-beg-of-defun uses syntax-ppss, and syntax-ppss uses
-                ;; font-lock-beginning-of-syntax-function, so
-                ;; font-lock-beginning-of-syntax-function, can't use
-                ;; verilog-beg-of-defun.
-                nil
-              'verilog-beg-of-defun))))
-  ;; End of DANGER
+  (set (make-local-variable 'font-lock-defaults)
+       `((verilog-font-lock-keywords
+          verilog-font-lock-keywords-1
+          verilog-font-lock-keywords-2
+          verilog-font-lock-keywords-3)
+         nil nil nil
+         ,(if (functionp 'syntax-ppss)
+              ;; verilog-beg-of-defun uses syntax-ppss, and syntax-ppss uses
+              ;; font-lock-beginning-of-syntax-function, so
+              ;; font-lock-beginning-of-syntax-function, can't use
+              ;; verilog-beg-of-defun.
+              nil
+            'verilog-beg-of-defun)))
 
   ;;------------------------------------------------------------
   ;; now hook in 'verilog-highlight-include-files (eldo-mode.el&spice-mode.el)
@@ -4115,19 +4075,14 @@ Key bindings specific to `verilog-mode-map' are:
       (make-local-hook 'font-lock-mode-hook)
       (make-local-hook 'font-lock-after-fontify-buffer-hook); doesn't exist in Emacs
       (make-local-hook 'after-change-functions))
-    ;; DANGER: `verilog-highlight-modules' or `verilog-highlight-includes' are meant to be disabled
-    ;; (add-hook 'font-lock-mode-hook 'verilog-highlight-buffer t t)
-    ;; (add-hook 'font-lock-after-fontify-buffer-hook 'verilog-highlight-buffer t t) ; not in Emacs
-    ;; (add-hook 'after-change-functions 'verilog-highlight-region t t)
-    ;; End of DANGER
+    (add-hook 'font-lock-mode-hook 'verilog-highlight-buffer t t)
+    (add-hook 'font-lock-after-fontify-buffer-hook 'verilog-highlight-buffer t t) ; not in Emacs
+    (add-hook 'after-change-functions 'verilog-highlight-region t t)
     )
 
   ;; Tell imenu how to handle Verilog.
   (set (make-local-variable 'imenu-generic-expression)
-       ;; DANGER: Own variable for imenu
-       ;; verilog-imenu-generic-expression)
-       larumbe/verilog-imenu-generic-expression)
-        ;; End of DANGER
+       verilog-imenu-generic-expression)
   ;; Tell which-func-modes that imenu knows about verilog
   (when (and (boundp 'which-func-modes) (listp which-func-modes))
     (add-to-list 'which-func-modes 'verilog-mode))
