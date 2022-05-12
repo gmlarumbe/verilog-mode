@@ -5789,7 +5789,6 @@ Return a list of two elements: (INDENT-TYPE INDENT-LEVEL)."
                    ;; if we are in a parenthesized list, and the user likes to indent these, return.
                    ;; unless we are in the newfangled coverpoint or constraint blocks
                    (if (and
-                        verilog-indent-lists
                         (verilog-in-paren)
                         (not (verilog-in-coverage-p))
                         )
