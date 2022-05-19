@@ -6154,7 +6154,11 @@ Jump from end to matching begin, from endcase to matching case, and so on."
       (setq reg "\\(\\<fork\\>\\)\\|\\(\\<join\\(_any\\|_none\\)?\\>\\)" ))
      ((looking-at "\\<endclass\\>")
       ;; 5: Search back for matching class
-      (setq reg "\\(\\<class\\>\\)\\|\\(\\<endclass\\>\\)" ))
+      (let ((itf-virt-class-re "\\(\\(interface\\|virtual\\)\s+\\<class\\>\\)"))
+        (save-excursion
+          (if (verilog-re-search-backward itf-virt-class-re nil 'move)
+              (setq reg itf-virt-class-re)
+            (setq reg "\\(\\<class\\>\\)\\|\\(\\<endclass\\>\\)" )))))
      ((looking-at "\\<endtable\\>")
       ;; 6: Search back for matching table
       (setq reg "\\(\\<table\\>\\)\\|\\(\\<endtable\\>\\)" ))
