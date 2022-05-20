@@ -3752,10 +3752,10 @@ Use filename, if current buffer being edited shorten to just buffer name."
      ((looking-at (concat
                    "\\(\\<endmodule\\>\\)\\|"        ; 1
                    "\\(\\<endprimitive\\>\\)\\|"     ; 2
-                   "\\(\\<endclass\\>\\)\\|"         ; 3
-                   "\\(\\<endprogram\\>\\)\\|"       ; 4
-                   "\\(\\<endinterface\\>\\)\\|"     ; 5
-                   "\\(\\<endpackage\\>\\)\\|"       ; 6
+                   "\\(\\<endclass\\>\\)\\|"         ; 3 TODO: Should not hit this
+                   "\\(\\<endprogram\\>\\)\\|"       ; 4 TODO: Should not hit this either
+                   "\\(\\<endinterface\\>\\)\\|"     ; 5 TODO: Neigther
+                   "\\(\\<endpackage\\>\\)\\|"       ; 6 TODO ... and so on
                    "\\(\\<endconnectmodule\\>\\)\\|" ; 7
                    "\\(\\<endchecker\\>\\)\\|"       ; 8
                    "\\(\\<endconfig\\>\\)"))         ; 9
@@ -3883,7 +3883,9 @@ Use filename, if current buffer being edited shorten to just buffer name."
 		      (setq here (point)) ; remember where we started
 		      (goto-char (match-beginning 1))
 		      (cond
-		       ((if (or
+                       ((verilog-looking-back "\\<typedef\\>\s+" (point-at-bol)) ; avoid nesting for typedef class definitions)
+                        (forward-word-strictly 1))
+                       ((if (or
 			     (looking-at verilog-disable-fork-re)
 			     (and (looking-at "fork")
 				  (progn
@@ -3900,14 +3902,14 @@ Use filename, if current buffer being edited shorten to just buffer name."
      ((looking-at (concat
                    "\\(\\<\\(macro\\)?module\\>\\)\\|" ; 1,2
                    "\\(\\<primitive\\>\\)\\|"          ; 3
-                   "\\(\\<class\\>\\)\\|"              ; 4
-                   "\\(\\<program\\>\\)\\|"            ; 5
-                   "\\(\\<interface\\>\\)\\|"          ; 6
-                   "\\(\\<package\\>\\)\\|"            ; 7
-                   "\\(\\<connectmodule\\>\\)\\|"      ; 8
-                   "\\(\\<generate\\>\\)\\|"           ; 9
-                   "\\(\\<checker\\>\\)\\|"            ; 10
-                   "\\(\\<config\\>\\)"))              ; 11
+                   "\\(\\(\\(interface\\|virtual\\)\s+\\)?\\<class\\>\\)\\|" ; 4,5,6
+                   "\\(\\<program\\>\\)\\|"            ; 7
+                   "\\(\\<interface\\>\\)\\|"          ; 8
+                   "\\(\\<package\\>\\)\\|"            ; 9
+                   "\\(\\<connectmodule\\>\\)\\|"      ; 10
+                   "\\(\\<generate\\>\\)\\|"           ; 11
+                   "\\(\\<checker\\>\\)\\|"            ; 12
+                   "\\(\\<config\\>\\)"))              ; 13
       (cond
        ((match-end 1)
 	(verilog-re-search-forward "\\<endmodule\\>" nil 'move))
@@ -3915,19 +3917,19 @@ Use filename, if current buffer being edited shorten to just buffer name."
 	(verilog-re-search-forward "\\<endprimitive\\>" nil 'move))
        ((match-end 4)
 	(verilog-re-search-forward "\\<endclass\\>" nil 'move))
-       ((match-end 5)
-	(verilog-re-search-forward "\\<endprogram\\>" nil 'move))
-       ((match-end 6)
-	(verilog-re-search-forward "\\<endinterface\\>" nil 'move))
        ((match-end 7)
-	(verilog-re-search-forward "\\<endpackage\\>" nil 'move))
+	(verilog-re-search-forward "\\<endprogram\\>" nil 'move))
        ((match-end 8)
-        (verilog-re-search-forward "\\<endconnectmodule\\>" nil 'move))
+	(verilog-re-search-forward "\\<endinterface\\>" nil 'move))
        ((match-end 9)
-        (verilog-re-search-forward "\\<endgenerate\\>" nil 'move))
+	(verilog-re-search-forward "\\<endpackage\\>" nil 'move))
        ((match-end 10)
-        (verilog-re-search-forward "\\<endchecker\\>" nil 'move))
+        (verilog-re-search-forward "\\<endconnectmodule\\>" nil 'move))
        ((match-end 11)
+        (verilog-re-search-forward "\\<endgenerate\\>" nil 'move))
+       ((match-end 12)
+        (verilog-re-search-forward "\\<endchecker\\>" nil 'move))
+       ((match-end 13)
         (verilog-re-search-forward "\\<endconfig\\>" nil 'move))
        (t
 	(goto-char st)
@@ -6127,6 +6129,26 @@ of the appropriate enclosing block."
 	(ding 't)
 	(setq nest 0))))))
 
+
+(defun verilog-leap-to-class-head ()
+  (let ((nest 1)
+        (class-re "\\(\\<interface\\> +\\<class\\>\\|\\<virtual\\> +\\<class\\>\\|\\<class\\>\\)\\|\\(\\<endclass\\>\\)"))
+    (catch 'skip
+      (while (verilog-re-search-backward class-re nil 'move)
+        (cond
+         ((match-end 1) ; begin
+          (when (verilog-looking-back "\\<interface\\>\s+\\|\\<virtual\\>\s+" (point-at-bol))
+            (goto-char (match-beginning 0)))
+          (unless (verilog-looking-back "\\<typedef\\>\s+" (point-at-bol))
+            (setq nest (1- nest))
+            (if (= 0 nest)
+	        ;; Now previous line describes syntax
+	        (throw 'skip 1))))
+	 ((match-end 2) ; end
+          (setq nest (1+ nest))))))))
+
+
+
 (defun verilog-leap-to-head ()
   "Move point to the head of this block.
 Jump from end to matching begin, from endcase to matching case, and so on."
@@ -6152,13 +6174,12 @@ Jump from end to matching begin, from endcase to matching case, and so on."
      ((looking-at "\\<join\\(_any\\|_none\\)?\\>")
       ;; 4: Search back for matching fork
       (setq reg "\\(\\<fork\\>\\)\\|\\(\\<join\\(_any\\|_none\\)?\\>\\)" ))
+
      ((looking-at "\\<endclass\\>")
       ;; 5: Search back for matching class
-      (let ((itf-virt-class-re "\\(\\(interface\\|virtual\\)\s+\\<class\\>\\)"))
-        (save-excursion
-          (if (verilog-re-search-backward itf-virt-class-re nil 'move)
-              (setq reg itf-virt-class-re)
-            (setq reg "\\(\\<class\\>\\)\\|\\(\\<endclass\\>\\)" )))))
+      (catch 'nesting
+        (verilog-leap-to-class-head)
+        (setq reg nil)))
      ((looking-at "\\<endtable\\>")
       ;; 6: Search back for matching table
       (setq reg "\\(\\<table\\>\\)\\|\\(\\<endtable\\>\\)" ))
