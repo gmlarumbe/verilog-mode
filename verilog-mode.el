@@ -3883,7 +3883,7 @@ Use filename, if current buffer being edited shorten to just buffer name."
 		      (setq here (point)) ; remember where we started
 		      (goto-char (match-beginning 1))
 		      (cond
-                       ((verilog-looking-back "\\(\\<typedef\\>\s+\\)" nil) ; avoid nesting for typedef class definitions)
+                       ((verilog-looking-back "\\(\\<typedef\\>\\s-+\\)" nil) ; avoid nesting for typedef class definitions)
                         (forward-word-strictly 1))
                        ((if (or
 			     (looking-at verilog-disable-fork-re)
@@ -3902,10 +3902,10 @@ Use filename, if current buffer being edited shorten to just buffer name."
      ((looking-at (concat
                    "\\(\\<\\(macro\\)?module\\>\\)\\|" ; 1,2
                    "\\(\\<primitive\\>\\)\\|"          ; 3
-                   "\\(\\<interface\\>\s+\\<class\\>\\)\\|" ;4
-                   "\\(\\<virtual\\>\s+\\<class\\>\\)\\|" ;5
+                   "\\(\\<interface\\>\\s-+\\<class\\>\\)\\|" ;4
+                   "\\(\\<virtual\\>\\s-+\\<class\\>\\)\\|" ;5
                    "\\(\\<class\\>\\)\\|"                ;6
-                   ;; "\\(\\(\\(interface\\|virtual\\)\s+\\)?\\<class\\>\\)\\|" ; 4,5,6
+                   ;; "\\(\\(\\(interface\\|virtual\\)\\s-+\\)?\\<class\\>\\)\\|" ; 4,5,6
                    "\\(\\<program\\>\\)\\|"            ; 7
                    "\\(\\<interface\\>\\)\\|"          ; 8
                    "\\(\\<package\\>\\)\\|"            ; 9
@@ -6137,24 +6137,19 @@ of the appropriate enclosing block."
 
 (defun verilog-leap-to-class-head ()
   (let ((nest 1)
-        (class-re (concat "\\(\\<interface\\>\s+\\<class\\>\\)\\|"
-                          "\\(\\<virtual\\>\s+\\<class\\>\\)\\|"
-                          "\\(\\<class\\>\\)\\|"
-                          "\\(\\<endclass\\>\\)")))
+        (class-re (concat "\\(\\<class\\>\\)\\|\\(\\<endclass\\>\\)")))
     (catch 'skip
       (while (verilog-re-search-backward class-re nil 'move)
         (cond
-         ((or (match-end 1)
-              (match-end 2)
-              (match-end 3)) ; begin
-          (when (verilog-looking-back "\\(\\<interface\\>\s+\\)\\|\\(\\<virtual\\>\s+\\)" nil)
+         ((match-end 1) ; begin
+          (when (verilog-looking-back "\\(\\<interface\\>\\s-+\\)\\|\\(\\<virtual\\>\\s-+\\)" (point-at-bol))
             (goto-char (match-beginning 0)))
-          (unless (verilog-looking-back "\\<typedef\\>\s+" nil)
+          (unless (verilog-looking-back "\\<typedef\\>\\s-+" (point-at-bol))
             (setq nest (1- nest))
             (if (= 0 nest)
 	        ;; Now previous line describes syntax
 	        (throw 'skip 1))))
-	 ((match-end 4) ; end
+	 ((match-end 2) ; end
           (setq nest (1+ nest))))))))
 
 
