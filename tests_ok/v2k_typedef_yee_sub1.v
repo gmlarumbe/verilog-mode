@@ -11,7 +11,7 @@ module v2k_typedef_yee_sub1
    );
    
    
-   pixel24_t pixel_ff;
+   pixel24_t           pixel_ff;
    
    
    always_ff @(posedge cp) begin

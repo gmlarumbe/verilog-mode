@@ -37,8 +37,8 @@ module v2k_typedef_yee
    //
    /*AUTOWIRE*/
    // Beginning of automatic wires (for undeclared instantiated-module outputs)
-   pixel24_t            sub1_out_pixel;         // From itest_sub1 of v2k_typedef_yee_sub1.v
-   logic_t              sub1_to_sub2;           // From itest_sub1 of v2k_typedef_yee_sub1.v
+   pixel24_t                 sub1_out_pixel;            // From itest_sub1 of v2k_typedef_yee_sub1.v
+   logic_t               sub1_to_sub2;          // From itest_sub1 of v2k_typedef_yee_sub1.v
    // End of automatics
    
    

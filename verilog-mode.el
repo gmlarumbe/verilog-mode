@@ -1403,7 +1403,7 @@ This variable is t for backward compatibility; nil is suggested."
   :type 'boolean)
 (put 'verilog-case-fold 'safe-local-variable #'verilog-booleanp)
 
-(defcustom verilog-typedef-regexp nil
+(defcustom verilog-typedef-regexp "_\\(t\\|e\\|s\\|if\\|vif\\)$"
   "If non-nil, regular expression that matches Verilog-2001 typedef names.
 For example, \"_t$\" matches typedefs named with _t, as in the C language.
 See also `verilog-case-fold'."
@@ -7154,7 +7154,10 @@ Be verbose about progress unless optional QUIET set."
             (or (and (not (verilog-in-directive-p))  ; could have `define input foo
                      (looking-at verilog-declaration-re))
                 (and (verilog-parenthesis-depth)
-                     (looking-at verilog-interface-modport-re))))
+                     (looking-at verilog-interface-modport-re))
+                (and verilog-typedef-regexp
+                     (thing-at-point 'symbol)
+                     (string-match verilog-typedef-regexp (thing-at-point 'symbol)))))
 	  (progn
 	    (if (verilog-parenthesis-depth)
 		;; in an argument list or parameter block
@@ -7258,6 +7261,12 @@ Be verbose about progress unless optional QUIET set."
 		    (progn
                       (delete-horizontal-space)
                       (indent-to ind 1)))))
+               ((and verilog-typedef-regexp
+                     (thing-at-point 'symbol)
+                     (string-match verilog-typedef-regexp (thing-at-point 'symbol)))
+                (forward-word)
+                (delete-horizontal-space)
+                (indent-to ind 1))
 	       ((verilog-continued-line-1 (marker-position startpos))
 		(goto-char e)
                 (unless (and (verilog-in-parenthesis-p)

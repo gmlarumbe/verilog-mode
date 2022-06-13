@@ -23,7 +23,7 @@ interface autoinoutmodport_type_intf(input logic clk, input logic rst_n);
    import ap_defines::*;
    
    logic [4:0] inst;
-   isel_t       isel;
+   isel_t isel;
    logic replay;
    
    clocking ctl_cb @(posedge clk);

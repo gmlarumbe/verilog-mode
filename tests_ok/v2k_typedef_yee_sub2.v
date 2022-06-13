@@ -16,8 +16,8 @@ module v2k_typedef_yee_sub2
    input  logic_t sub1_to_sub2,
    input  logic_t sub1_to_sub2_and_top
           
-          pixel24_t pixel_ff;
-   ff_t      sub1_to_sub2_ff;
+   pixel24_t pixel_ff;
+   ff_t                  sub1_to_sub2_ff;
    
    
    always_ff @(posedge cp) begin
