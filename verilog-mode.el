@@ -7157,7 +7157,7 @@ Be verbose about progress unless optional QUIET set."
                      (looking-at verilog-interface-modport-re))
                 (and verilog-typedef-regexp
                      (thing-at-point 'symbol)
-                     (string-match verilog-typedef-regexp (thing-at-point 'symbol)))))
+                     (verilog-string-match-fold verilog-typedef-regexp (thing-at-point 'symbol)))))
 	  (progn
 	    (if (verilog-parenthesis-depth)
 		;; in an argument list or parameter block
@@ -7187,7 +7187,8 @@ Be verbose about progress unless optional QUIET set."
 	      (setq
 	       start (progn
 		       (verilog-beg-of-statement-1)
-		       (while (and (looking-at verilog-declaration-re)
+		       (while (and (or (looking-at verilog-declaration-re)
+                                       (looking-at (concat "\\s-*" "\\<[a-zA-Z_][a-zA-Z_0-9]*" (string-remove-suffix "$" verilog-typedef-regexp) "\\>")))
 				   (not (bobp)))
 			 (skip-chars-backward " \t")
 			 (setq e (point))
@@ -7201,7 +7202,8 @@ Be verbose about progress unless optional QUIET set."
 		     (verilog-end-of-statement)
 		     (setq e (point))	;Might be on last line
 		     (verilog-forward-syntactic-ws)
-		     (while (looking-at verilog-declaration-re)
+		     (while (or (looking-at verilog-declaration-re)
+                                (looking-at (concat "\\s-*" "\\<[a-zA-Z_][a-zA-Z_0-9]*" (string-remove-suffix "$" verilog-typedef-regexp) "\\>")))
 		       (verilog-end-of-statement)
 		       (setq e (point))
 		       (verilog-forward-syntactic-ws))
@@ -7263,14 +7265,14 @@ Be verbose about progress unless optional QUIET set."
                       (indent-to ind 1)))))
                ((and verilog-typedef-regexp
                      (thing-at-point 'symbol)
-                     (string-match verilog-typedef-regexp (thing-at-point 'symbol)))
+                     (verilog-string-match-fold verilog-typedef-regexp (thing-at-point 'symbol)))
                 (forward-word)
                 (delete-horizontal-space)
                 (indent-to ind 1))
 	       ((verilog-continued-line-1 (marker-position startpos))
 		(goto-char e)
                 (unless (and (verilog-in-parenthesis-p)
-                             (looking-at (concat "\\s-*" verilog-symbol-re "\\s-*" verilog-symbol-re "\\s-*")))
+                             (looking-at (concat "\\s-*" verilog-symbol-re "\\s-+" verilog-symbol-re "\\s-*")))
                   (indent-line-to ind)))
 	       ((verilog-in-struct-p)
 		;; could have a declaration of a user defined item
@@ -7455,29 +7457,32 @@ BASEIND is the base indent to offset everything."
   "Return the indent level that will line up several lines within the region.
 Region is defined by B and EDPOS."
   (save-excursion
-    (let ((ind 0) e)
+    (let ((ind 0)
+          re e)
       (goto-char b)
       ;; Get rightmost position
       (while (progn (setq e (marker-position edpos))
+                    ;; TODO: Do some refactoring here?
+                    (setq re (cond (verilog-indent-declaration-macros
+                                    verilog-declaration-re-1-macro)
+                                   ((looking-at (concat "\\s-*" "\\<[a-zA-Z_][a-zA-Z_0-9]*" (string-remove-suffix "$" verilog-typedef-regexp) "\\>"))
+                                    (concat "\\s-*" "\\<[a-zA-Z_][a-zA-Z_0-9]*" (string-remove-suffix "$" verilog-typedef-regexp) "\\>"))
+                                   (t
+                                    verilog-declaration-or-iface-mp-re-2-no-macro)))
 		    (< (point) e))
-	(if (verilog-re-search-forward
-	     (or (and verilog-indent-declaration-macros
-		      verilog-declaration-re-1-macro)
-                 verilog-declaration-or-iface-mp-re-2-no-macro) e 'move)
-	    (progn
-	      (goto-char (match-end 0))
-	      (verilog-backward-syntactic-ws)
-	      (if (> (current-column) ind)
-		  (setq ind (current-column)))
-              (goto-char (match-end 0))
-              (forward-line 1))))
+	(when (verilog-re-search-forward re e 'move)
+	  (goto-char (match-end 0))
+	  (verilog-backward-syntactic-ws)
+	  (if (> (current-column) ind)
+	      (setq ind (current-column)))
+          (goto-char (match-end 0))
+          (forward-line 1)))
       (if (> ind 0)
 	  (1+ ind)
 	;; No lineup-string found
 	(goto-char b)
 	(end-of-line)
 	(verilog-backward-syntactic-ws)
-	;;(skip-chars-backward " \t")
 	(1+ (current-column))))))
 
 (defun verilog-get-lineup-indent-2 (regexp beg end)
