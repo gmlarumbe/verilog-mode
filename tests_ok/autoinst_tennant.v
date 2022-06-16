@@ -73,7 +73,7 @@ module xx
     input [X-1:0]      xb,
     
     input [X-1:0]      cb,
-    output             sometype_t [1:0] st,
+    output sometype_t  [1:0] st,
     
     input [X*Y-1:0]    yb,
     
@@ -93,7 +93,7 @@ module yy
     input [X-1:0]       xb,
     
     input [X-1:0]       cb,
-    input               sometype_t [1:0] st,
+    input sometype_t    [1:0] st,
     
     output [X*Y-1:0]    yb,
     

@@ -336,6 +336,28 @@ wherever possible, since it is slow."
                 (looking-at (concat "\\(?:"  regexp "\\)\\'")))))
         (not (null pos)))))))
 
+
+;; Fetched from `subr-x.el.gz' of GNU Emacs 28.1
+(defsubst string-remove-suffix (suffix string)
+  "Remove SUFFIX from STRING if present."
+  (if (string-suffix-p suffix string)
+      (substring string 0 (- (length string) (length suffix)))
+    string))
+
+;; Fetched from `subr.el.gz' of GNU Emacs 28.1
+(defun string-suffix-p (suffix string  &optional ignore-case)
+  "Return non-nil if SUFFIX is a suffix of STRING.
+If IGNORE-CASE is non-nil, the comparison is done without paying
+attention to case differences."
+  (let ((start-pos (- (length string) (length suffix))))
+    (and (>= start-pos 0)
+         (eq t (compare-strings suffix nil nil
+                                string start-pos nil ignore-case)))))
+
+
+;; TODO: `compare-strings' not present in XEmacs. How to declare this?
+
+
 (eval-and-compile
   (cond
    ((fboundp 'restore-buffer-modified-p)
@@ -6743,6 +6765,16 @@ Also move point to constraint."
        (verilog-in-struct-p)
        (looking-at "}\\(?:\\s-*\\w+\\s-*\\(?:,\\s-*\\w+\\s-*\\)*\\)?;")))
 
+(defun verilog-at-typedef-decl-p ()     ; TODO: Change name, it's not a typedef, but a user type variable
+  "Return regexp of typedef declaration if point is over such declaration
+defined by `verilog-typedef-regexp.'"
+  (let ((typedef-decl-regexp (concat "\\s-*"
+                                     "\\(" verilog-declaration-prefix-re "\\s-*\\)?"
+                                     "\\<[a-zA-Z_][a-zA-Z_0-9]*"
+                                     (string-remove-suffix "$" verilog-typedef-regexp) "\\>")))
+    (when (looking-at typedef-decl-regexp)
+      typedef-decl-regexp)))
+
 (defun verilog-parenthesis-depth ()
   "Return non zero if in parenthetical-expression."
   (save-excursion (nth 1 (verilog-syntax-ppss))))
@@ -7147,19 +7179,26 @@ Be verbose about progress unless optional QUIET set."
 	(here (point))
 	el r ind start startpos end endpos base-ind)
     (save-excursion
-      (if (progn
+      (if (progn                        ; TODO: Change with (when instead of (if (progn))
             ;; (verilog-beg-of-statement-1)
             (beginning-of-line)
             (verilog-forward-syntactic-ws)
             (or (and (not (verilog-in-directive-p))  ; could have `define input foo
-                     (looking-at verilog-declaration-re))
+                     (looking-at verilog-declaration-re)
+                     ;; TODO: Check tests_ok/v2k_typedef_yee_inc.v:19
+                     (save-excursion
+                       (verilog-re-search-forward verilog-declaration-re (point-at-eol) 'move)
+                       (forward-word-strictly)
+                       (verilog-forward-syntactic-ws)
+                       (not (verilog-at-struct-p))))
                 (and (verilog-parenthesis-depth)
                      (looking-at verilog-interface-modport-re))
                 (and verilog-typedef-regexp
                      (thing-at-point 'symbol)
-                     (verilog-string-match-fold verilog-typedef-regexp (thing-at-point 'symbol)))))
+                     (verilog-string-match-fold verilog-typedef-regexp (thing-at-point 'symbol))
+                     (not (verilog-in-struct-p))))) ; TODO: Also add not in coverage-p?
 	  (progn
-	    (if (verilog-parenthesis-depth)
+	    (if (verilog-parenthesis-depth) ; TODO: Replace with `verilog-in-parenthesis-p'? `verilog-parenthesis-depth' is also valid for typedef's and structs in {} and []
 		;; in an argument list or parameter block
 		(setq el (verilog-backward-up-list -1)
 		      start (progn
@@ -7188,7 +7227,7 @@ Be verbose about progress unless optional QUIET set."
 	       start (progn
 		       (verilog-beg-of-statement-1)
 		       (while (and (or (looking-at verilog-declaration-re)
-                                       (looking-at (concat "\\s-*" "\\<[a-zA-Z_][a-zA-Z_0-9]*" (string-remove-suffix "$" verilog-typedef-regexp) "\\>")))
+                                       (verilog-at-typedef-decl-p))
 				   (not (bobp)))
 			 (skip-chars-backward " \t")
 			 (setq e (point))
@@ -7202,8 +7241,13 @@ Be verbose about progress unless optional QUIET set."
 		     (verilog-end-of-statement)
 		     (setq e (point))	;Might be on last line
 		     (verilog-forward-syntactic-ws)
-		     (while (or (looking-at verilog-declaration-re)
-                                (looking-at (concat "\\s-*" "\\<[a-zA-Z_][a-zA-Z_0-9]*" (string-remove-suffix "$" verilog-typedef-regexp) "\\>")))
+		     (while (and (save-excursion ; TODO: Similar to the thing at the beginning, refactor as a function
+                                   (verilog-re-search-forward verilog-declaration-re (point-at-eol) 'move)
+                                   (forward-word-strictly)
+                                   (verilog-forward-syntactic-ws)
+                                   (not (verilog-at-struct-p)))
+                                 (or (looking-at verilog-declaration-re)
+                                     (verilog-at-typedef-decl-p)))
 		       (verilog-end-of-statement)
 		       (setq e (point))
 		       (verilog-forward-syntactic-ws))
@@ -7248,9 +7292,11 @@ Be verbose about progress unless optional QUIET set."
               ;; (verilog-do-indent (verilog-calculate-indent)))
 	      (verilog-forward-ws&directives)
 	      (cond
+               ;; Similar order than in `verilog-get-lineup-indent'. TODO: Could be refactored?
 	       ((or (and verilog-indent-declaration-macros
 			 (looking-at verilog-declaration-re-2-macro))
-		    (looking-at verilog-declaration-or-iface-mp-re-2-no-macro))
+		    (verilog-at-typedef-decl-p)
+                    (looking-at verilog-declaration-or-iface-mp-re-2-no-macro))
 		(let ((p (match-end 0)))
 		  (set-marker m1 p)
 		  (if (verilog-re-search-forward "[[#`]" p 'move)
@@ -7463,20 +7509,25 @@ Region is defined by B and EDPOS."
       ;; Get rightmost position
       (while (progn (setq e (marker-position edpos))
                     ;; TODO: Do some refactoring here?
+                    ;; Similar order than in `verilog-pretty-declarations', could be refactored?
                     (setq re (cond (verilog-indent-declaration-macros
                                     verilog-declaration-re-1-macro)
-                                   ((looking-at (concat "\\s-*" "\\<[a-zA-Z_][a-zA-Z_0-9]*" (string-remove-suffix "$" verilog-typedef-regexp) "\\>"))
-                                    (concat "\\s-*" "\\<[a-zA-Z_][a-zA-Z_0-9]*" (string-remove-suffix "$" verilog-typedef-regexp) "\\>"))
+                                   ((verilog-at-typedef-decl-p)
+                                    (verilog-at-typedef-decl-p))
+                                   ((looking-at verilog-declaration-or-iface-mp-re-2-no-macro)
+                                    verilog-declaration-or-iface-mp-re-2-no-macro)
                                    (t
-                                    verilog-declaration-or-iface-mp-re-2-no-macro)))
+                                    nil)))
 		    (< (point) e))
-	(when (verilog-re-search-forward re e 'move)
+	(when (and re
+                   (verilog-re-search-forward re e 'move))
 	  (goto-char (match-end 0))
 	  (verilog-backward-syntactic-ws)
 	  (if (> (current-column) ind)
 	      (setq ind (current-column)))
-          (goto-char (match-end 0))
-          (forward-line 1)))
+          (goto-char (match-end 0)))
+        ;; Forward line even though there was no match
+        (forward-line 1))
       (if (> ind 0)
 	  (1+ ind)
 	;; No lineup-string found

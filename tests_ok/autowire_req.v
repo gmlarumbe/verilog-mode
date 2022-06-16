@@ -1,8 +1,8 @@
 
 module autowire_req ();
    
-   reqcmd_t       AReq;
-   reqcmd_t       BReq;
+   reqcmd_t AReq;
+   reqcmd_t BReq;
    
    /*AUTOWIRE*/
    

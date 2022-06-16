@@ -7,16 +7,16 @@ module t;
     );
     */
    fifo_s data_fifo (
-                     //fifo_s data_fifo (
-                     // Inputs
-                     .clk                  (fifo_clk),
-                     /*AUTOINST*/
-                     // Outputs
-                     .out_bus           (out_bus[31:0]),         // Templated
-                     .out_signal        (NC),                    // Templated
-                     // Inputs
-                     .ignored_signal    (1'b1),                  // Templated
-                     .reset             (reset));
+          //fifo_s data_fifo (
+          // Inputs
+          .clk (fifo_clk),
+          /*AUTOINST*/
+          // Outputs
+          .out_bus (out_bus[31:0]), // Templated
+          .out_signal (NC), // Templated
+          // Inputs
+          .ignored_signal (1'b1), // Templated
+          .reset (reset));
    
    /*fifo_s AUTO_TEMPLATE (
     .ignored_signal         (1'b1),
@@ -27,14 +27,14 @@ module t;
    //fifo_s data_fifo (
    fifo_s data_fifo (
                      // Inputs
-                     .clk                  (fifo_clk),
+                     .clk (fifo_clk),
                      /*AUTOINST*/
                      // Outputs
-                     .out_bus           (out_bus[31:0]),         // Templated
-                     .out_signal        (NC),                    // Templated
+                     .out_bus (out_bus[31:0]), // Templated
+                     .out_signal (NC), // Templated
                      // Inputs
-                     .ignored_signal    (1'b1),                  // Templated
-                     .reset             (reset));
+                     .ignored_signal (1'b1), // Templated
+                     .reset (reset));
 endmodule
 
 module fifo_s;

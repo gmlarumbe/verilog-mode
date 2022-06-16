@@ -5,9 +5,7 @@ module top;
    
    autoinst_iface270_sub inst_if (/*AUTOINST*/);
    
-   ifio sub (/*AUTOINST*/
-             // Interfaces
-             .inst_if                   (inst_if));
+   ifio sub (/*AUTOINST*/);
    
 endmodule
 

@@ -53,7 +53,6 @@ module xyz (/*AUTOARG*/
       .signal_f                         (signal_f),              // Templated
       // Inputs
       .signal_d                         (signal_c),              // Templated AUTONOHOOKUP
-      .signal_e                         (signal_e),              // Templated AUTONOHOOKUP
       .signal_e2                        (signal_e2),             // Templated AUTONOHOOKUP
       .signal_e3                        ((signal_e3)));          // Templated
    
@@ -76,7 +75,7 @@ module def (/*AUTOARG*/
             // Outputs
             signal_f,
             // Inputs
-            signal_d, signal_e, signal_e2, signal_e3
+            signal_d, signal_e2, signal_e3
             );
    
    input [1:0] signal_d;

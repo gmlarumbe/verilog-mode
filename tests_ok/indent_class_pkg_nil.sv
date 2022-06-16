@@ -1,7 +1,7 @@
 package foo;
    
    typedef logic [7:0] byte_t;
-   localparam          byte_t ALL_ONES = 8'hFF;
+   localparam byte_t   ALL_ONES = 8'hFF;
    
    function foo3 (input int a);
       $display(a);
