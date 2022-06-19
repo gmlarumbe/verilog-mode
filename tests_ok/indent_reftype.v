@@ -3,9 +3,9 @@ endclass // example_t
 
 class test;
    typedef class example_t;
-   
+
    // Breaks with (verilog-pretty-declarations)
-   
+
    virtual function void cmp_core
      (
       input bit [8:0]   max_len,
@@ -17,7 +17,7 @@ class test;
       input bit         recmp_en = 1'b0,
       output bit [17:0] re_pixel_output_tmp
       );
-      
+
    endfunction
 endclass
 

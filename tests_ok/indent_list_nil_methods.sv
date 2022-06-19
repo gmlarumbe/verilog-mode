@@ -1,5 +1,5 @@
 class test;
-   
+
    virtual function void func1 (
       input bit [8:0]   in1,
       input bit         in2,
@@ -12,7 +12,7 @@ class test;
    );
       out1 = {in1[7:0], in1[7:0]};
    endfunction
-   
+
    virtual task task1 (
       input bit [8:0]   in1,
       input bit         in2,
@@ -25,49 +25,49 @@ class test;
    );
       out1 = {in1[7:0], in1[7:0]};
    endtask
-   
+
    protected function void func2 (
       input bit        in,
       output bit [3:0] out
    );
       out = |in;
    endfunction
-   
+
    protected task task2 (
       input bit        in,
       output bit [3:0] out
    );
       out = |in;
    endtask
-   
+
    static function void func3 (
       input bit        in,
       output bit [3:0] out
    );
       out = |in;
    endfunction
-   
+
    static task task3 (
       input bit        in,
       output bit [3:0] out
    );
       out = |in;
    endtask
-   
+
    function void func4 (
       input bit        in,
       output bit [3:0] out
    );
       out = &in;
    endfunction
-   
+
    task task4 (
       input bit        in,
       output bit [3:0] out
    );
       out = &in;
    endtask
-   
+
 endclass
 
 // Local Variables:
