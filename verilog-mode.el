@@ -7145,7 +7145,7 @@ Be verbose about progress unless optional QUIET set."
   (let ((m1 (make-marker))
         (e (point))
 	(here (point))
-	el r ind start startpos end endpos base-ind)
+	el r ind start startpos end endpos base-ind comm-ind)
     (save-excursion
       (if (progn
             ;; (verilog-beg-of-statement-1)
@@ -7272,6 +7272,16 @@ Be verbose about progress unless optional QUIET set."
 		(verilog-forward-ws&directives)
 		(forward-line -1)))
 	      (forward-line 1))
+            ;; Align comments
+            (setq comm-ind (verilog-comment-align startpos endpos))
+            (save-excursion
+              (let ((comment-column comm-ind))
+                (goto-char startpos)
+                (while (< (point) endpos)
+                  (when (comment-search-forward (point-at-eol) :noerror)
+                    (comment-indent))
+                  (forward-line 1))))
+            ;; Exit
 	    (unless quiet (message "")))))))
 
 (defun verilog-pretty-expr (&optional quiet)
@@ -7451,24 +7461,22 @@ Region is defined by B and EDPOS."
       ;; Get rightmost position
       (while (progn (setq e (marker-position edpos))
 		    (< (point) e))
-	(if (verilog-re-search-forward
-	     (or (and verilog-indent-declaration-macros
-		      verilog-declaration-re-1-macro)
-                 verilog-declaration-or-iface-mp-re-2-no-macro) e 'move)
-	    (progn
-	      (goto-char (match-end 0))
-	      (verilog-backward-syntactic-ws)
-	      (if (> (current-column) ind)
-		  (setq ind (current-column)))
-              (goto-char (match-end 0))
-              (forward-line 1))))
+        (when (verilog-re-search-forward
+	       (or (and verilog-indent-declaration-macros
+		        verilog-declaration-re-1-macro)
+                   verilog-declaration-or-iface-mp-re-2-no-macro) e 'move)
+	  (goto-char (match-end 0))
+	  (verilog-backward-syntactic-ws)
+	  (if (> (current-column) ind)
+	      (setq ind (current-column)))
+          (goto-char (match-end 0))
+          (forward-line 1)))
       (if (> ind 0)
 	  (1+ ind)
 	;; No lineup-string found
 	(goto-char b)
 	(end-of-line)
 	(verilog-backward-syntactic-ws)
-	;;(skip-chars-backward " \t")
 	(1+ (current-column))))))
 
 (defun verilog-get-lineup-indent-2 (regexp beg end)
@@ -7494,6 +7502,42 @@ BEG and END."
 	          (end-of-line)
 	          (skip-chars-backward " \t")
 	          (1+ (current-column))))
+      ind)))
+
+;; TODO: The correct way of doing it is by calculating the indentation only on declarations, not on every line
+;;  - Use a while re-search-forward similar to the one in `verilog-get-lineup-indent'
+;;  - This way the things not detected as declarations will not have an effect on indentation level of comments
+;;  - Plus, using `comment-column' will align everything, not only the inline comments after every line e.g.
+;;
+;;    // asdf
+;;    logic asdf;
+;;
+;;    Turns into:
+;;                // asdf
+;;    logic asdf;
+;;
+;;  - The way to avoid it is to indent also with a while re-search-forward each line individually between startpos/endpos
+;;  - And finally take the effect of markers into account, because probably the endpos changes after indenting each comment individually
+(defun verilog-comment-align (startpos endpos)
+  ""
+  (untabify startpos endpos) ; Needed for proper point calculations
+  (save-excursion
+    (let ((ind 0) comm-ind)
+      (goto-char startpos)
+      (while (< (point) endpos)
+        (end-of-line)
+        (when (comment-search-backward (point-at-bol) :noerror)
+          (verilog-backward-syntactic-ws)
+          ;; TODO: Infinite loop @:
+          ;; /media/gonz/LINUX_DATA/Datos/Work/HP/Repos/lfp/ip_xcvr/xcvr/sllc_XC7Z035_3G75/rtl/ser_3g75_4tx4rx_rc125.sv:45
+          ;; // Following ports are declared to parameterize ports and shall not be used during instantiation
+          (setq comm-ind (1+ (- (point) (point-at-bol))))
+          (when (> comm-ind ind)
+            (setq ind comm-ind)))
+        ;; (forward-line 1)
+        (end-of-line)
+        (verilog-forward-syntactic-ws)
+        )
       ind)))
 
 (defun verilog-comment-depth (type val)
