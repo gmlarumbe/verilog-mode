@@ -737,6 +737,12 @@ Otherwise else is lined up with first character on line holding matching if."
   :type 'boolean)
 (put 'verilog-align-ifelse 'safe-local-variable #'verilog-booleanp)
 
+(defcustom verilog-align-declaration-comments t
+  "Non-nil means align declaration comments."
+  :group 'verilog-mode-indent
+  :type 'boolean)
+(put 'verilog-align-declaration-comments 'safe-local-variable #'verilog-booleanp)
+
 (defcustom verilog-minimum-comment-distance 10
   "Minimum distance (in lines) between begin and end required before a comment.
 Setting this variable to zero results in every end acquiring a comment; the
@@ -4118,7 +4124,6 @@ Key bindings specific to `verilog-mode-map' are:
   (set-syntax-table verilog-mode-syntax-table)
   (set (make-local-variable 'indent-line-function)
        #'verilog-indent-line-relative)
-  ;; TODO: This might be having some effect:
   (set (make-local-variable 'comment-indent-function) #'verilog-comment-indent)
   (set (make-local-variable 'parse-sexp-ignore-comments) nil)
   (set (make-local-variable 'comment-start) "// ")
@@ -7274,22 +7279,18 @@ Be verbose about progress unless optional QUIET set."
 		(forward-line -1)))
 	      (forward-line 1))
             ;; Align comments
-            (setq comm-ind (verilog-comment-align startpos endpos))
-            (save-excursion
-              (let ((comment-column comm-ind))
-                (goto-char startpos)
+            (when verilog-align-declaration-comments
+              (setq comm-ind (verilog-comment-align (marker-position startpos) endpos))
+              (save-excursion
+                (goto-char (marker-position startpos))
 	        (while (progn (setq e (marker-position endpos))
 			      (< (point) e))
-                  (while (< (point) e)
-                    (when (and (verilog-re-search-forward
-	                        (or (and verilog-indent-declaration-macros
-		                         verilog-declaration-re-1-macro)
-                                    verilog-declaration-or-iface-mp-re-2-no-macro) e 'move)
-                               (comment-search-forward (point-at-eol) :noerror))
-                      ;; (verilog-skip-backward-comments)
-                      (comment-indent))))))
-            ;; Exit
-	    (unless quiet (message "")))))))
+                  (when (verilog-find-comment-in-declaration e)
+                    (goto-char (match-beginning 0))
+                    (delete-horizontal-space)
+                    (indent-to comm-ind 1))))))
+        ;; Exit
+	(unless quiet (message ""))))))
 
 (defun verilog-pretty-expr (&optional quiet)
   "Line up expressions around point.
@@ -7511,46 +7512,34 @@ BEG and END."
 	          (1+ (current-column))))
       ind)))
 
-;; TODO: The correct way of doing it is by calculating the indentation only on declarations, not on every line
-;;  - Use a while re-search-forward similar to the one in `verilog-get-lineup-indent'
-;;  - This way the things not detected as declarations will not have an effect on indentation level of comments
-;;  - Plus, using `comment-column' will align everything, not only the inline comments after every line e.g.
-;;
-;;    // asdf
-;;    logic asdf;
-;;
-;;    Turns into:
-;;                // asdf
-;;    logic asdf;
-;;
-;;  - The way to avoid it is to indent also with a while re-search-forward each line individually between startpos/endpos
-;;  - And finally take the effect of markers into account, because probably the endpos changes after indenting each comment individually
-(defun verilog-comment-align (startpos endpos)
-  ""
-  (untabify startpos endpos) ; Needed for proper point calculations
+(defun verilog-find-comment-in-declaration (bound)
+  "Return position of inline comment in declaration.
+Move the cursor while trying to find declarations and comments.
+BOUND is a buffer position that bounds the search."
+  (and (verilog-re-search-forward
+	(or (and verilog-indent-declaration-macros
+		 verilog-declaration-re-1-macro)
+            verilog-declaration-or-iface-mp-re-2-no-macro) bound 'move)
+       (re-search-forward verilog-comment-start-regexp (point-at-eol) :noerror)))
+
+(defun verilog-comment-align (b endpos)
+  "Return the indent level that will line up inline comments within the region.
+Region is defined by B and ENDPOS."
+  (untabify b endpos) ; Needed for proper point calculations
   (save-excursion
-    (let ((ind 0) e comm-ind)
-      (goto-char startpos)
+    (let ((ind 0)
+          e comm-ind)
+      (goto-char b)
       ;; Get rightmost position
       (while (progn (setq e (marker-position endpos))
 		    (< (point) e))
-        (when (and (verilog-re-search-forward
-	            (or (and verilog-indent-declaration-macros
-		             verilog-declaration-re-1-macro)
-                        verilog-declaration-or-iface-mp-re-2-no-macro) e 'move)
-                   (comment-search-forward (point-at-eol) :noerror))
+        (when (verilog-find-comment-in-declaration e)
           (end-of-line)
           (verilog-backward-syntactic-ws)
-          ;; TODO: Infinite loop @:
-          ;; /media/gonz/LINUX_DATA/Datos/Work/HP/Repos/lfp/ip_xcvr/xcvr/sllc_XC7Z035_3G75/rtl/ser_3g75_4tx4rx_rc125.sv:45
-          ;; // Following ports are declared to parameterize ports and shall not be used during instantiation
           (setq comm-ind (1+ (- (point) (point-at-bol))))
           (when (> comm-ind ind)
             (setq ind comm-ind)))
-        (forward-line 1)
-        ;; (end-of-line)
-        ;; (verilog-forward-syntactic-ws)
-        )
+        (forward-line 1))
       ind)))
 
 (defun verilog-comment-depth (type val)

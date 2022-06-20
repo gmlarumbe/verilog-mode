@@ -7,7 +7,7 @@ module escape_top (/*AUTOARG*/
    
    /*AUTOINPUT*/
    // Beginning of automatic inputs (from unused autoinst inputs)
-   input \i&e; ;                        // To a of escape_a.v
+   input \i&e; ; // To a of escape_a.v
    // End of automatics
    /*AUTOOUTPUT*/
    // Beginning of automatic outputs (from unused autoinst outputs)

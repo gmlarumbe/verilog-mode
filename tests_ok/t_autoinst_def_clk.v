@@ -8,7 +8,7 @@ module t_autoinst_def_clk
    
    /*AUTOOUTPUT*/
    // Beginning of automatic outputs (from unused autoinst outputs)
-   output c                     // From sub of sub.v
+   output c    // From sub of sub.v
    // End of automatics
    );
    
