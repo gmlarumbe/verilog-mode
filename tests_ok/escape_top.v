@@ -11,8 +11,8 @@ module escape_top (/*AUTOARG*/
    // End of automatics
    /*AUTOOUTPUT*/
    // Beginning of automatic outputs (from unused autoinst outputs)
-   output \o[2] ; // From a of escape_a.v
-   output \oren10 ;             // From a of escape_a.v
+   output \o[2] ;   // From a of escape_a.v
+   output \oren10 ; // From a of escape_a.v
    // End of automatics
    
    /* escape_a AUTO_TEMPLATE(

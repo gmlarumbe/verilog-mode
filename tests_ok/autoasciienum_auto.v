@@ -28,7 +28,7 @@ module autoasciienum_auto();
    // End of automatics
    /*AUTOASCIIENUM("sm_ps2", "_sm_ps2__ascii", "_")*/
    // Beginning of automatic ASCII enum decoding
-   reg [47:0] _sm_ps2__ascii;           // Decode of sm_ps2
+   reg [47:0] _sm_ps2__ascii; // Decode of sm_ps2
    always @(sm_ps2) begin
       case ({sm_ps2})
         PS2_IDL:  _sm_ps2__ascii = "ps2idl";

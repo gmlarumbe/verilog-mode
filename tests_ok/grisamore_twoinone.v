@@ -6,8 +6,8 @@ module foo (/*AUTOARG*/
             );
    /*AUTOINPUT*/
    // Beginning of automatic inputs (from unused autoinst inputs)
-   input  a; // To foo2 of foo2.v
-   input  b; // To foo2 of foo2.v
+   input  a;   // To foo2 of foo2.v
+   input  b;   // To foo2 of foo2.v
    // End of automatics
    /*AUTOOUTPUT*/
    // Beginning of automatic outputs (from unused autoinst outputs)

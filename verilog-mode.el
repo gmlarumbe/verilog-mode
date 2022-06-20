@@ -4118,6 +4118,7 @@ Key bindings specific to `verilog-mode-map' are:
   (set-syntax-table verilog-mode-syntax-table)
   (set (make-local-variable 'indent-line-function)
        #'verilog-indent-line-relative)
+  ;; TODO: This might be having some effect:
   (set (make-local-variable 'comment-indent-function) #'verilog-comment-indent)
   (set (make-local-variable 'parse-sexp-ignore-comments) nil)
   (set (make-local-variable 'comment-start) "// ")
@@ -7277,10 +7278,16 @@ Be verbose about progress unless optional QUIET set."
             (save-excursion
               (let ((comment-column comm-ind))
                 (goto-char startpos)
-                (while (< (point) endpos)
-                  (when (comment-search-forward (point-at-eol) :noerror)
-                    (comment-indent))
-                  (forward-line 1))))
+	        (while (progn (setq e (marker-position endpos))
+			      (< (point) e))
+                  (while (< (point) e)
+                    (when (and (verilog-re-search-forward
+	                        (or (and verilog-indent-declaration-macros
+		                         verilog-declaration-re-1-macro)
+                                    verilog-declaration-or-iface-mp-re-2-no-macro) e 'move)
+                               (comment-search-forward (point-at-eol) :noerror))
+                      ;; (verilog-skip-backward-comments)
+                      (comment-indent))))))
             ;; Exit
 	    (unless quiet (message "")))))))
 
@@ -7522,11 +7529,17 @@ BEG and END."
   ""
   (untabify startpos endpos) ; Needed for proper point calculations
   (save-excursion
-    (let ((ind 0) comm-ind)
+    (let ((ind 0) e comm-ind)
       (goto-char startpos)
-      (while (< (point) endpos)
-        (end-of-line)
-        (when (comment-search-backward (point-at-bol) :noerror)
+      ;; Get rightmost position
+      (while (progn (setq e (marker-position endpos))
+		    (< (point) e))
+        (when (and (verilog-re-search-forward
+	            (or (and verilog-indent-declaration-macros
+		             verilog-declaration-re-1-macro)
+                        verilog-declaration-or-iface-mp-re-2-no-macro) e 'move)
+                   (comment-search-forward (point-at-eol) :noerror))
+          (end-of-line)
           (verilog-backward-syntactic-ws)
           ;; TODO: Infinite loop @:
           ;; /media/gonz/LINUX_DATA/Datos/Work/HP/Repos/lfp/ip_xcvr/xcvr/sllc_XC7Z035_3G75/rtl/ser_3g75_4tx4rx_rc125.sv:45
@@ -7534,9 +7547,9 @@ BEG and END."
           (setq comm-ind (1+ (- (point) (point-at-bol))))
           (when (> comm-ind ind)
             (setq ind comm-ind)))
-        ;; (forward-line 1)
-        (end-of-line)
-        (verilog-forward-syntactic-ws)
+        (forward-line 1)
+        ;; (end-of-line)
+        ;; (verilog-forward-syntactic-ws)
         )
       ind)))
 
