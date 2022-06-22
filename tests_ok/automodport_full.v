@@ -11,8 +11,8 @@ module auto_module
     output        out_pure,
     input         in_pure,
     // End of automatics
-    //ex: input in_pure;
-    //ex: output        out_pure;
+    //ex: input   in_pure;
+    //ex: output  out_pure;
     
     /*AUTOINOUTMODPORT("automodport_if" "req_mon_mp")*/
     // Beginning of automatic in/out/inouts (from modport)
@@ -20,9 +20,9 @@ module auto_module
     input [63:0]  req_dat,
     input         req_credit,
     // End of automatics
-    //ex: input                 req_credit,             // To auto_i of auto_intf.sv
-    //ex: input [63:0]          req_data,               // To auto_i of auto_intf.sv
-    //ex: input                 req_val,                // To auto_i of auto_intf.sv
+    //ex: input                   req_credit,             // To auto_i of auto_intf.sv
+    //ex: input [63:0]            req_data,               // To auto_i of auto_intf.sv
+    //ex: input                   req_val,                // To auto_i of auto_intf.sv
     
     /*AUTOINOUTMODPORT("automodport_if" "rsp_drv_mp")*/
     // Beginning of automatic in/out/inouts (from modport)
