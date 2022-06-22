@@ -7251,19 +7251,20 @@ Be verbose about progress unless optional QUIET set."
 	      (cond
 	       ((or (and verilog-indent-declaration-macros
 			 (looking-at verilog-declaration-re-2-macro))
-		    (looking-at verilog-declaration-or-iface-mp-re-2-no-macro))
-		(let ((p (match-end 0)))
-		  (set-marker m1 p)
-		  (if (verilog-re-search-forward "[[#`]" p 'move)
+                    (looking-at verilog-declaration-or-iface-mp-re-2-no-macro))
+                (unless (looking-at (concat "\\( " verilog-declaration-or-iface-mp-re-2-no-macro "\\) ""\\s-*" "\\(" verilog-comment-start-regexp "\\)"))
+		  (let ((p (match-end 0)))
+		    (set-marker m1 p)
+		    (if (verilog-re-search-forward "[[#`]" p 'move)
+		        (progn
+			  (forward-char -1)
+			  (just-one-space)
+			  (goto-char (marker-position m1))
+                          (delete-horizontal-space)
+                          (indent-to ind 1))
 		      (progn
-			(forward-char -1)
-			(just-one-space)
-			(goto-char (marker-position m1))
                         (delete-horizontal-space)
-                        (indent-to ind 1))
-		    (progn
-                      (delete-horizontal-space)
-                      (indent-to ind 1)))))
+                        (indent-to ind 1))))))
 	       ((verilog-continued-line-1 (marker-position startpos))
 		(goto-char e)
                 (unless (and (verilog-in-parenthesis-p)
@@ -7280,7 +7281,7 @@ Be verbose about progress unless optional QUIET set."
 	      (forward-line 1))
             ;; Align comments
             (when verilog-align-declaration-comments
-              (setq comm-ind (verilog-comment-align (marker-position startpos) endpos))
+              (setq comm-ind (verilog-get-comment-align-indent (marker-position startpos) endpos))
               (save-excursion
                 (goto-char (marker-position startpos))
 	        (while (progn (setq e (marker-position endpos))
@@ -7469,10 +7470,18 @@ Region is defined by B and EDPOS."
       ;; Get rightmost position
       (while (progn (setq e (marker-position edpos))
 		    (< (point) e))
-        (when (verilog-re-search-forward
-	       (or (and verilog-indent-declaration-macros
-		        verilog-declaration-re-1-macro)
-                   verilog-declaration-or-iface-mp-re-2-no-macro) e 'move)
+        (when
+            ;; (and
+               (verilog-re-search-forward
+	            (or (and verilog-indent-declaration-macros
+		             verilog-declaration-re-1-macro)
+                        verilog-declaration-or-iface-mp-re-2-no-macro) e 'move)
+                   ;; (not (looking-at (concat "\\s-*" verilog-comment-start-regexp)))
+                   ;; )
+
+          ;; (verilog-at-line-with-embedded-comment)
+          ;; )
+          ;; )
 	  (goto-char (match-end 0))
 	  (verilog-backward-syntactic-ws)
 	  (if (> (current-column) ind)
@@ -7520,9 +7529,11 @@ BOUND is a buffer position that bounds the search."
 	(or (and verilog-indent-declaration-macros
 		 verilog-declaration-re-1-macro)
             verilog-declaration-or-iface-mp-re-2-no-macro) bound 'move)
+       ;; (not (looking-at "\\s-*/\\*.*\\*/"))
+       (not (looking-at (concat "\\s-*" verilog-comment-start-regexp)))
        (re-search-forward verilog-comment-start-regexp (point-at-eol) :noerror)))
 
-(defun verilog-comment-align (b endpos)
+(defun verilog-get-comment-align-indent (b endpos)
   "Return the indent level that will line up inline comments within the region.
 Region is defined by B and ENDPOS."
   (untabify b endpos) ; Needed for proper point calculations
@@ -7541,6 +7552,15 @@ Region is defined by B and ENDPOS."
             (setq ind comm-ind)))
         (forward-line 1))
       ind)))
+
+;; (defun verilog-at-line-with-embedded-comment ()
+;;   "Return non-nil if current line has a star comment embedded:
+;; e.g: input wire [2:0] /* synopsys enum cur_info */ sel
+;; Return point position of end of start comment."
+;;   (save-excursion
+;;     (goto-char (point-at-bol))
+;;     (when (re-search-forward "/\\*" (point-at-eol) :noerror)
+;;       (re-search-forward "\\*/" (point-at-eol) :noerror))))
 
 (defun verilog-comment-depth (type val)
   "A useful mode debugging aide.  TYPE and VAL are comments for insertion."
