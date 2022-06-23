@@ -2834,34 +2834,28 @@ find the errors."
        ;; builtin classes
        "mailbox" "semaphore"
        ))))
-(defconst verilog-declaration-re
-  (concat "\\(" verilog-declaration-prefix-re "\\s-*\\)?" verilog-declaration-core-re))
-
 (defconst verilog-range-re "\\(\\[[^]]*\\]\\s-*\\)+")
 (defconst verilog-optional-signed-re "\\s-*\\(\\(un\\)?signed\\)?")
 (defconst verilog-optional-signed-range-re
   (concat "\\s-*\\(\\<\\(reg\\|wire\\)\\>\\s-*\\)?\\(\\<\\(un\\)?signed\\>\\s-*\\)?\\(" verilog-range-re "\\)?"))
 (defconst verilog-macroexp-re "`\\sw+")
 (defconst verilog-delay-re "#\\s-*\\(\\([0-9_]+\\('s?[hdxbo][0-9a-fA-F_xz]+\\)?\\)\\|\\(([^()]*)\\)\\|\\(\\sw+\\)\\)")
+(defconst verilog-interface-modport-re "\\(\\s-*\\([a-zA-Z0-9`_$]+\\.[a-zA-Z0-9`_$]+\\)[ \t\f]+\\)")
+(defconst verilog-comment-start-regexp "//\\|/\\*" "Dual comment value for `comment-start-regexp'.")
 
-(defconst verilog-declaration-re-no-macro
-  (concat "\\s-*" verilog-declaration-re
+(defconst verilog-declaration-simple-re
+  (concat "\\(" verilog-declaration-prefix-re "\\s-*\\)?" verilog-declaration-core-re))
+(defconst verilog-declaration-re
+  (concat "\\s-*" verilog-declaration-simple-re
           "\\s-*\\(\\(" verilog-optional-signed-range-re "\\)\\|\\(" verilog-delay-re "\\)\\)"))
 (defconst verilog-declaration-re-macro
-  (concat "\\s-*" verilog-declaration-re
+  (concat "\\s-*" verilog-declaration-simple-re
           "\\s-*\\(\\(" verilog-optional-signed-range-re "\\)\\|\\(" verilog-delay-re "\\)\\|\\(" verilog-macroexp-re "\\)\\)"))
-
-(defconst verilog-interface-modport-re "\\(\\s-*\\([a-zA-Z0-9`_$]+\\.[a-zA-Z0-9`_$]+\\)[ \t\f]+\\)")
+(defconst verilog-declaration-embedded-comments-re
+  (concat "\\( " verilog-declaration-re "\\) ""\\s-*" "\\(" verilog-comment-start-regexp "\\)")
+  "Match expressions such as: input logic [7:0] /* auto enum sm_psm */ sm_psm;")
 (defconst verilog-declaration-or-iface-mp-re
-  (concat "\\(" verilog-declaration-re "\\|" verilog-interface-modport-re "\\)"))
-(defconst verilog-declaration-or-iface-mp-re-no-macro
-  (concat "\\(" verilog-declaration-re-no-macro "\\)\\|\\(" verilog-interface-modport-re "\\)"))
-
-(defconst verilog-comment-start-regexp "//\\|/\\*"
-  "Dual comment value for `comment-start-regexp'.")
-(defconst verilog-declaration-with-embedded-comments-re
-  (concat "\\( " verilog-declaration-or-iface-mp-re-no-macro "\\) ""\\s-*" "\\(" verilog-comment-start-regexp "\\)")
-  "e.g: input logic [7:0] /* auto enum sm_psm */ sm_psm;")
+  (concat "\\(" verilog-declaration-re "\\)\\|\\(" verilog-interface-modport-re "\\)"))
 
 (defconst verilog-defun-re
   (eval-when-compile (verilog-regexp-words '("macromodule" "connectmodule" "module" "class" "program" "interface" "package" "primitive" "config"))))
@@ -3971,7 +3965,7 @@ Use filename, if current buffer being edited shorten to just buffer name."
   ""
   (if verilog-indent-declaration-macros
       verilog-declaration-re-macro
-    verilog-declaration-or-iface-mp-re-no-macro))
+    verilog-declaration-or-iface-mp-re))
 
 ;;
 ;;
@@ -7156,7 +7150,6 @@ Be verbose about progress unless optional QUIET set."
 	el r ind start startpos end endpos base-ind comm-ind)
     (save-excursion
       (if (progn
-            ;; (verilog-beg-of-statement-1)
             (beginning-of-line)
             (verilog-forward-syntactic-ws)
             (or (and (not (verilog-in-directive-p))  ; could have `define input foo
@@ -7249,7 +7242,7 @@ Be verbose about progress unless optional QUIET set."
 	      (verilog-forward-ws&directives)
 	      (cond
 	       ((looking-at (verilog-get-declaration-re))
-                (unless (looking-at verilog-declaration-with-embedded-comments-re)
+                (unless (looking-at verilog-declaration-embedded-comments-re)
                   (let ((p (match-end 0)))
                     (set-marker m1 p)
                     (if (verilog-re-search-forward "[[#`]" p 'move)
@@ -7440,7 +7433,7 @@ BASEIND is the base indent to offset everything."
                           (indent-to ind 1))
                       (delete-horizontal-space)
                       (indent-to ind 1)))
-		(if (looking-at verilog-declaration-re-no-macro)
+		(if (looking-at verilog-declaration-re)
 		    (let ((p (match-end 0)))
 		      (set-marker m1 p)
 		      (if (verilog-re-search-forward "[[`#]" p 'move)
