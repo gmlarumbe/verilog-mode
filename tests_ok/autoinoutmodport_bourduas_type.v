@@ -3,9 +3,9 @@
 module apl2c_connect(autoinoutmodport_type_intf ctl_i,
                      /*AUTOINOUTMODPORT("autoinoutmodport_type_intf",  "ctl_cb")*/
                      // Beginning of automatic in/out/inouts (from modport)
-                     input [4:0] inst,
-                     input       isel_t isel,
-                     input       replay
+                     input [4:0]  inst,
+                     input isel_t isel,
+                     i nput replay
                      // End of automatics
                      );
    

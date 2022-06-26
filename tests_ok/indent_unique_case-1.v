@@ -1,15 +1,15 @@
 module  xxx_xxxxxx  (input wire clk, input wire reset);
    
    typedef enum reg [4:0] {IDLE, IIII, HHHHH,
-                           AA_OP, AA_CMRD, AA_CMRD_WAIT, AA_RMW, AA_RMW_WAIT, AA_CMLLL, AA_CMLLL_WAIT, AA_NEXT,
-                           BB_OP, BB_CMLLL, BB_CMLLL_WAIT, BB_NEXT,
-                           CC_OP, CC_NEXT_OOOO,
-                           DD_OP, DD_CMRD, DD_CMRD_WAIT, DD_ACCUM, DD_CMLLL, DD_CMLLL_WAIT,
-                           EE_OP, EE_NEXT_OOOO,
-                           FF_OP,
-                           zxcvzxcv, cvbncvbn} xxxxxx_state_e;
+                          AA_OP, AA_CMRD, AA_CMRD_WAIT, AA_RMW, AA_RMW_WAIT, AA_CMLLL, AA_CMLLL_WAIT, AA_NEXT,
+                          BB_OP, BB_CMLLL, BB_CMLLL_WAIT, BB_NEXT,
+                          CC_OP, CC_NEXT_OOOO,
+                          DD_OP, DD_CMRD, DD_CMRD_WAIT, DD_ACCUM, DD_CMLLL, DD_CMLLL_WAIT,
+                          EE_OP, EE_NEXT_OOOO,
+                          FF_OP,
+                          zxcvzxcv, cvbncvbn} xxxxxx_state_e;
    
-   xxxxxx_state_e current_state;
+   xxxxxx_state_e         current_state;
    
    always_ff @ (posedge clk) begin
       if (reset) begin
@@ -364,3 +364,6 @@ endmodule // xxx_xxxxxx
 
 
 
+// Local Variables:
+// verilog-typedef-regexp: "_e$"
+// End:
