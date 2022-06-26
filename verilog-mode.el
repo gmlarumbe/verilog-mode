@@ -4566,10 +4566,18 @@ area.  See also `verilog-comment-region'."
 	    (end-of-line)
 	    (delete-region pos (1+ (point)))))))))
 
-(defun verilog-beg-of-defun ()
+(defun verilog-beg-of-defun (&optional arg)
   "Move backward to the beginning of the current function or procedure."
   (interactive)
-  (verilog-re-search-backward verilog-defun-re nil 'move))
+  (let ((beg-of-defun-re (verilog-regexp-words '("function" "task"))))
+    (unless arg
+      (setq arg 1))
+    (if (< arg 0)
+        (progn
+          (verilog-re-search-forward beg-of-defun-re nil 'move)
+          (goto-char (match-beginning 0)))
+      (verilog-re-search-backward beg-of-defun-re nil 'move)
+      (goto-char (point-at-bol)))))
 
 (defun verilog-beg-of-defun-quick ()
   "Move backward to the beginning of the current function or procedure.
@@ -4577,10 +4585,16 @@ Uses `verilog-scan' cache."
   (interactive)
   (verilog-re-search-backward-quick verilog-defun-re nil 'move))
 
-(defun verilog-end-of-defun ()
+(defun verilog-end-of-defun (&optional arg)
   "Move forward to the end of the current function or procedure."
   (interactive)
-  (verilog-re-search-forward verilog-end-defun-re nil 'move))
+  (let ((end-of-defun-re (verilog-regexp-words '("endfunction" "endtask"))))
+    (unless arg
+      (setq arg 1))
+    (if (< arg 0)
+        (verilog-re-search-backward end-of-defun-re nil 'move)
+      (verilog-re-search-forward end-of-defun-re nil 'move)
+      (goto-char (point-at-eol)))))
 
 (defun verilog-get-end-of-defun ()
   (save-excursion
@@ -4597,10 +4611,10 @@ Uses `verilog-scan' cache."
 	(case-fold-search nil)
 	(oldpos (point))
 	(b (progn
-	     (verilog-beg-of-defun)
+	     (verilog-re-search-backward verilog-defun-re nil 'move)
 	     (point-marker)))
 	(e (progn
-	     (verilog-end-of-defun)
+	     (verilog-re-search-forward verilog-end-defun-re nil 'move)
 	     (point-marker))))
     (goto-char (marker-position b))
     (if (> (- e b) 200)
@@ -4846,7 +4860,7 @@ More specifically, after a generate and before an endgenerate."
 (defun verilog-in-fork-region-p ()
   "Return true if between a fork and join."
   (interactive)
-  (let ((lim (save-excursion (verilog-beg-of-defun)  (point)))
+  (let ((lim (save-excursion (verilog-re-search-backward verilog-defun-re nil 'move)  (point)))
 	(nest 1))
     (save-excursion
       (while (and
@@ -5071,7 +5085,7 @@ primitive or interface named NAME."
                             (insert str)
                             (ding 't))
                         (let ((lim
-                               (save-excursion (verilog-beg-of-defun) (point)))
+                               (save-excursion (verilog-re-search-backward verilog-defun-re nil 'move) (point)))
                               (here (point)))
                           (cond
                            (;-- handle named block differently
@@ -7748,7 +7762,7 @@ for matches of `str' and adding the occurrence tp `all' through point END."
   "Calculate all possible completions for variables (or constants)."
   (let ((start (point)))
     ;; Search for all reachable var declarations
-    (verilog-beg-of-defun)
+    (verilog-re-search-backward verilog-defun-re nil 'move)
     (save-excursion
       ;; Check var declarations
       (verilog-get-completion-decl start))))
@@ -14780,7 +14794,7 @@ and the case items."
     (if (not (member v1 verilog-keywords))
 	(save-excursion
 	  (setq verilog-sk-signal v1)
-	  (verilog-beg-of-defun)
+	  (verilog-re-search-backward verilog-defun-re nil 'move)
 	  (verilog-end-of-statement)
 	  (verilog-forward-syntactic-ws)
 	  (verilog-sk-def-reg)
