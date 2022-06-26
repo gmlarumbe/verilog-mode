@@ -16,9 +16,9 @@ typedef reg lat_t; // Default latch type
 //----------------------------
 // 24 bit wide pixel types
 //
-typedef union packed {
+typedef union  packed {
    logic_t [23:0] bits;
-   struct packed {
+   struct        packed {
       logic_t [7:0] red;
       logic_t [7:0] grn;
       logic_t [7:0] blu;

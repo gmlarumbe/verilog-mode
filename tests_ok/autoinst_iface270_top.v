@@ -14,3 +14,7 @@ endmodule
 module ifio
   (autoinst_iface270_sub inst_if);
 endmodule
+
+// Local Variables:
+// verilog-typedef-regexp: "_t$"
+// End:

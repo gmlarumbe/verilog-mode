@@ -364,3 +364,6 @@ endmodule // xxx_xxxxxx
 
 
 
+// Local Variables:
+// verilog-typedef-regexp: "_e$"
+// End:

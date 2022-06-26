@@ -31,3 +31,7 @@ module fifo_s;
    output [31:0] out_bus;
    output 	 out_signal;
 endmodule
+
+// Local Variables:
+// verilog-typedef-regexp: "_t$"
+// End:

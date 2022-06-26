@@ -86,3 +86,7 @@ module def (/*AUTOARG*/
    output signal_f;
 
 endmodule // def
+
+// Local Variables:
+// verilog-typedef-regexp: "_t$"
+// End:

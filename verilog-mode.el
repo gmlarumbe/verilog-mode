@@ -1434,7 +1434,7 @@ This variable is t for backward compatibility; nil is suggested."
   :type 'boolean)
 (put 'verilog-case-fold 'safe-local-variable #'verilog-booleanp)
 
-(defcustom verilog-typedef-regexp nil
+(defcustom verilog-typedef-regexp "_\\(t\\|e\\|s\\|if\\|vif\\)$"
   "If non-nil, regular expression that matches Verilog-2001 typedef names.
 For example, \"_t$\" matches typedefs named with _t, as in the C language.
 See also `verilog-case-fold'."
@@ -1860,6 +1860,15 @@ If set will become buffer local.")
 ;;
 ;;  Macros
 ;;
+
+;; TODO: Set as defsubst, for some reason?
+(defun verilog-string-remove-suffix (suffix-re string)
+  "Remove suffix determined by SUFFIX-RE from STRING if present.
+Replaces `string-remove-suffix', not present in XEmacs."
+  (let ((pos (string-match (concat suffix-re "$") string)))
+    (if pos
+        (substring string 0 pos)
+      string)))
 
 (defsubst verilog-within-string ()
   (nth 3 (parse-partial-sexp (point-at-bol) (point))))
@@ -4029,6 +4038,9 @@ Use filename, if current buffer being edited shorten to just buffer name."
          verilog-declaration-embedded-comments-re)
         (verilog-indent-declaration-macros
          verilog-declaration-re-macro)
+        ;; TODO: Do some refactor here
+        ((verilog-at-typedef-decl-p)
+         (verilog-at-typedef-decl-p))
         (t
          verilog-declaration-re)))
 
@@ -6897,6 +6909,19 @@ Also move point to constraint."
       (backward-char))
     (verilog-at-enum-p)))
 
+;; TODO: Change name, it's not a typedef, but a user type variable
+;; TODO: Do something more complex but in steps and return t/nil (and see what to do with the regexp)
+(defun verilog-at-typedef-decl-p ()
+  "Return regexp of typedef declaration if point is over such declaration
+defined by `verilog-typedef-regexp.'"
+  (let ((typedef-decl-regexp (concat "\\s-*"
+                                     "\\(" verilog-declaration-prefix-re "\\s-*\\(" verilog-range-re "\\)?" "\\s-*\\)?"
+                                     "\\<[a-zA-Z_][a-zA-Z_0-9]*"
+                                     (verilog-string-remove-suffix "\\$" verilog-typedef-regexp) "\\>"
+                                     "\\s-*" "\\(" verilog-range-re "\\)?")))
+    (when (looking-at typedef-decl-regexp)
+      typedef-decl-regexp)))
+
 (defun verilog-parenthesis-depth ()
   "Return non zero if in parenthetical-expression."
   (save-excursion (nth 1 (verilog-syntax-ppss))))
@@ -7354,7 +7379,11 @@ Be verbose about progress unless optional QUIET set."
             (or (and (not (verilog-in-directive-p))  ; could have `define input foo
                      (verilog-looking-at-decl-to-align))
                 (and (verilog-parenthesis-depth)
-                     (looking-at verilog-interface-modport-re))))
+                     (looking-at verilog-interface-modport-re))
+                (and verilog-typedef-regexp
+                     (thing-at-point 'symbol)
+                     (verilog-string-match-fold verilog-typedef-regexp (thing-at-point 'symbol))
+                     (not (verilog-in-struct-p))))) ; TODO: Also add not in coverage-p?
 	  (progn
 	    (if (verilog-parenthesis-depth)
 		;; in an argument list or parameter block
@@ -7454,6 +7483,12 @@ Be verbose about progress unless optional QUIET set."
                       (progn
                         (delete-horizontal-space)
                         (indent-to ind 1))))))
+               ((and verilog-typedef-regexp
+                     (thing-at-point 'symbol)
+                     (verilog-string-match-fold verilog-typedef-regexp (thing-at-point 'symbol)))
+                (forward-word)
+                (delete-horizontal-space)
+                (indent-to ind 1))
 	       ((verilog-continued-line-1 (marker-position startpos))
 		(goto-char e)
                 (unless (and (verilog-in-parenthesis-p)
@@ -7688,10 +7723,21 @@ BASEIND is the base indent to offset everything."
   "Return the indent level that will line up several lines within the region.
 Region is defined by B and EDPOS."
   (save-excursion
-    (let ((ind 0) e)
+    (let ((ind 0)
+          re e)
       (goto-char b)
       ;; Get rightmost position
       (while (progn (setq e (marker-position edpos))
+                    ;; TODO: Do some refactoring here?
+                    ;; Similar order than in `verilog-pretty-declarations', could be refactored?
+                    (setq re (cond (verilog-indent-declaration-macros
+                                    verilog-declaration-re-1-macro)
+                                   ((verilog-at-typedef-decl-p)
+                                    (verilog-at-typedef-decl-p))
+                                   ((looking-at verilog-declaration-or-iface-mp-re-2-no-macro)
+                                    verilog-declaration-or-iface-mp-re-2-no-macro)
+                                   (t
+                                    nil)))
 		    (< (point) e))
 	(when (verilog-re-search-forward (verilog-get-declaration-re 'iface-mp) e 'move)
 	  (goto-char (match-end 0))

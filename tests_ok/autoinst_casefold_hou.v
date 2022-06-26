@@ -11,7 +11,7 @@ module test
    
    /*AUTOWIRE*/
    // Beginning of automatic wires (for undeclared instantiated-module outputs)
-   tTest                q;                      // From foo of foo.v
+   tTest    q;                  // From foo of foo.v
    // End of automatics
    
    /* foo AUTO_TEMPLATE (

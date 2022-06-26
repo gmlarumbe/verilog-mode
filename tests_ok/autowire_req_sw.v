@@ -2,7 +2,7 @@
 
 module autowire_req_sw
   (
-   input  reqcmd_t AReq,
+   input reqcmd_t  AReq,
    output reqcmd_t BReq
    /*AUTOINPUT*/
    );
