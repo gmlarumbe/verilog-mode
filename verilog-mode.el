@@ -7507,18 +7507,17 @@ BOUND is a buffer position that bounds the search."
 (defun verilog-get-comment-align-indent (b endpos)
   "Return the indent level that will line up comments within the region.
 Region is defined by B and ENDPOS."
-  (untabify b endpos) ; Needed for proper point calculations
   (save-excursion
     (let ((ind 0)
           e comm-ind)
       (goto-char b)
       ;; Get rightmost position
       (while (progn (setq e (marker-position endpos))
-		    (< (point) e))
+                    (< (point) e))
         (when (verilog-search-comment-in-declaration e)
           (end-of-line)
           (verilog-backward-syntactic-ws)
-          (setq comm-ind (1+ (- (point) (point-at-bol))))
+          (setq comm-ind (1+ (current-column)))
           (when (> comm-ind ind)
             (setq ind comm-ind)))
         (forward-line 1))
