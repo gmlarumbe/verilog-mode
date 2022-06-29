@@ -743,6 +743,13 @@ Otherwise else is lined up with first character on line holding matching if."
   :type 'boolean)
 (put 'verilog-align-declaration-comments 'safe-local-variable #'verilog-booleanp)
 
+(defcustom verilog-declaration-comments-distance 1
+  "Distance (in spaces) between longest declaration and comments.
+Only works if `verilog-align-declaration-comments' is non-nil."
+  :group 'verilog-mode-indent
+  :type 'integer)
+(put 'verilog-declaration-comments-distance 'safe-local-variable #'integerp)
+
 (defcustom verilog-minimum-comment-distance 10
   "Minimum distance (in lines) between begin and end required before a comment.
 Setting this variable to zero results in every end acquiring a comment; the
@@ -4052,6 +4059,9 @@ Variables controlling indentation/edit style:
    comments in tight quarters.
  `verilog-align-declaration-comments' (default t)
    Non-nil means align declaration comments.
+ `verilog-declaration-comments-distance' (default 1)
+   Distance (in spaces) between longest declaration and comments.
+   Only works if `verilog-align-declaration-comments' is non-nil.
  `verilog-auto-lineup'              (default `declarations')
    List of contexts where auto lineup of code should be done.
 
@@ -7294,7 +7304,7 @@ Be verbose about progress unless optional QUIET set."
                   (when (verilog-search-comment-in-declaration e)
                     (goto-char (match-beginning 0))
                     (delete-horizontal-space)
-                    (indent-to comm-ind 1))))))
+                    (indent-to (1- (+ comm-ind verilog-declaration-comments-distance))))))))
         ;; Exit
 	(unless quiet (message ""))))))
 
@@ -15077,6 +15087,7 @@ Files are checked based on `verilog-library-flags'."
        verilog-cexp-indent
        verilog-compiler
        verilog-coverage
+       verilog-declaration-comments-distance
        verilog-delete-auto-hook
        verilog-getopt-flags-hook
        verilog-highlight-grouping-keywords
