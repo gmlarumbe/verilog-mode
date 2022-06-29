@@ -7402,49 +7402,55 @@ BASEIND is the base indent to offset everything."
 	       (point)))
 	(ind)
 	(val)
-	(m1 (make-marker)))
+	(m1 (make-marker))
+        (in-paren (verilog-parenthesis-depth)))
     (setq val
 	  (+ baseind (eval (cdr (assoc 'declaration verilog-indent-alist)))))
     (indent-line-to val)
 
     ;; Use previous declaration (in this module) as template.
-    (if (or (eq 'all verilog-auto-lineup)
-	    (eq 'declarations verilog-auto-lineup))
-	(if (verilog-re-search-backward (verilog-get-declaration-re) lim t)
-	    (progn
-	      (goto-char (match-end 0))
-	      (skip-chars-forward " \t")
-	      (setq ind (current-column))
-	      (goto-char pos)
-	      (setq val
-		    (+ baseind
-		       (eval (cdr (assoc 'declaration verilog-indent-alist)))))
-	      (indent-line-to val)
-	      (if (and verilog-indent-declaration-macros
-		       (looking-at verilog-declaration-re-macro))
-		  (let ((p (match-end 0)))
-		    (set-marker m1 p)
-		    (if (verilog-re-search-forward "[[#`]" p 'move)
-			(progn
-			  (forward-char -1)
-			  (just-one-space)
-			  (goto-char (marker-position m1))
-                          (delete-horizontal-space)
-                          (indent-to ind 1))
-                      (delete-horizontal-space)
-                      (indent-to ind 1)))
-		(if (looking-at verilog-declaration-re)
-		    (let ((p (match-end 0)))
-		      (set-marker m1 p)
-		      (if (verilog-re-search-forward "[[`#]" p 'move)
-			  (progn
-			    (forward-char -1)
-			    (just-one-space)
-			    (goto-char (marker-position m1))
-                            (delete-horizontal-space)
-                            (indent-to ind 1))
-                        (delete-horizontal-space)
-                        (indent-to ind 1))))))))
+    (when (and (or (eq 'all verilog-auto-lineup)
+	           (eq 'declarations verilog-auto-lineup))
+               (verilog-re-search-backward (verilog-get-declaration-re) lim t)
+               (or (and in-paren                     ; The first declaration after a module port list ...
+                        (verilog-parenthesis-depth)) ; will most likely end up inside the module port list ...
+                   (and (not in-paren)               ; after previous verilog-re-search-backward
+                        (not (verilog-parenthesis-depth))))
+               (skip-chars-backward " \t\f") ; Skip variable declarations inside functions/tasks
+               (bolp))
+      (goto-char (match-end 0))
+      (skip-chars-forward " \t")
+      (setq ind (current-column))
+      (goto-char pos)
+      (setq val
+	    (+ baseind
+	       (eval (cdr (assoc 'declaration verilog-indent-alist)))))
+      (indent-line-to val)
+      (if (and verilog-indent-declaration-macros
+	       (looking-at verilog-declaration-re-macro))
+	  (let ((p (match-end 0)))
+	    (set-marker m1 p)
+	    (if (verilog-re-search-forward "[[#`]" p 'move)
+		(progn
+		  (forward-char -1)
+		  (just-one-space)
+		  (goto-char (marker-position m1))
+                  (delete-horizontal-space)
+                  (indent-to ind 1))
+              (delete-horizontal-space)
+              (indent-to ind 1)))
+	(when (looking-at verilog-declaration-re)
+	  (let ((p (match-end 0)))
+	    (set-marker m1 p)
+	    (if (verilog-re-search-forward "[[`#]" p 'move)
+		(progn
+		  (forward-char -1)
+		  (just-one-space)
+		  (goto-char (marker-position m1))
+                  (delete-horizontal-space)
+                  (indent-to ind 1))
+              (delete-horizontal-space)
+              (indent-to ind 1))))))
     (goto-char pos)))
 
 (defun verilog-get-lineup-indent (b edpos)
