@@ -1528,10 +1528,11 @@ If set will become buffer local.")
     (define-key map "\C-c/"    #'verilog-star-comment)
     (define-key map "\C-c\C-c" #'verilog-comment-region)
     (define-key map "\C-c\C-u" #'verilog-uncomment-region)
-    (when (featurep 'xemacs)
-      (define-key map [(meta control h)] #'verilog-mark-defun)
-      (define-key map "\M-\C-a"  #'verilog-beg-of-defun)
-      (define-key map "\M-\C-e"  #'verilog-end-of-defun))
+    (define-key map "\M-\C-h " #'verilog-mark-defun)
+    (define-key map "\M-\C-a"  #'verilog-beg-of-defun)
+    (define-key map "\M-\C-e"  #'verilog-end-of-defun)
+    (define-key map "\M-\C-u"  #'verilog-defun-level-up)
+    (define-key map "\M-\C-d"  #'verilog-defun-level-down)
     (define-key map "\C-c\C-d" #'verilog-goto-defun)
     (define-key map "\C-c\C-k" #'verilog-delete-auto)
     (define-key map "\C-c\C-a" #'verilog-auto)
@@ -4478,19 +4479,32 @@ following code fragment:
   (interactive "NMAX: ")
   (verilog-insert-1 "%3.3d" max))
 
+;; (defun verilog-mark-defun ()
+;;   "Mark the current Verilog function (or procedure).
+;; This puts the mark at the end, and point at the beginning."
+;;   (interactive)
+;;   (if (featurep 'xemacs)
+;;       (progn
+;; 	(push-mark)
+;; 	(verilog-end-of-defun)
+;; 	(push-mark)
+;; 	(verilog-beg-of-defun)
+;; 	(if (fboundp 'zmacs-activate-region)
+;; 	    (zmacs-activate-region)))
+;;     (mark-defun)))
+
 (defun verilog-mark-defun ()
   "Mark the current Verilog function (or procedure).
 This puts the mark at the end, and point at the beginning."
   (interactive)
-  (if (featurep 'xemacs)
-      (progn
-	(push-mark)
-	(verilog-end-of-defun)
-	(push-mark)
-	(verilog-beg-of-defun)
-	(if (fboundp 'zmacs-activate-region)
-	    (zmacs-activate-region)))
-    (mark-defun)))
+  ;; (verilog-end-of-defun)
+  (end-of-defun)
+  (push-mark (point-at-eol) nil t)
+  (beginning-of-defun-comments)
+  ;; (verilog-beg-of-defun)
+  ;; (push-mark (point-at-eol) nil t)
+  ;; (push-mark (point) nil t)
+  )
 
 (defun verilog-comment-region (start end)
   ;; checkdoc-params: (start end)
@@ -4566,18 +4580,107 @@ area.  See also `verilog-comment-region'."
 	    (end-of-line)
 	    (delete-region pos (1+ (point)))))))))
 
+;; INFO: First attempt (simple)
+;; (defun verilog-beg-of-defun (&optional arg)
+;;   "Move backward to the beginning of the current function or procedure."
+;;   (interactive)
+;;   (let ((beg-of-defun-re (verilog-regexp-words '("function" "task")))
+;;         pos)
+;;     (unless arg
+;;       (setq arg 1))
+;;     (if (< arg 0)
+;;         (progn
+;;           (setq pos (point))
+;;           (save-excursion
+;;             (when (verilog-re-search-forward beg-of-defun-re nil 'move)
+;;               (setq pos (match-beginning 0))))
+;;           (goto-char pos))
+;;       (verilog-re-search-backward beg-of-defun-re nil 'move)
+;;       (goto-char (point-at-bol)))))
+
+;; INFO: Second attempt (detects other constructs besides function/task)
+;; (defun verilog-beg-of-defun (&optional arg)
+;;   "Move backward to the beginning of the current function or procedure."
+;;   (interactive)
+;;   (let ((beg-of-defun-re (verilog-regexp-words '("function" "task" "class")))
+;;         (pos (point)))
+;;     (unless arg
+;;       (setq arg 1))
+;;     (save-excursion
+;;       (if (< arg 0)
+;;           (when (verilog-re-search-forward beg-of-defun-re nil 'move)
+;;             (setq pos (match-beginning 0)))
+;;         (when (verilog-re-search-backward beg-of-defun-re nil 'move)
+;;           (setq pos (point-at-bol)))))
+;;     (goto-char pos)))
+
+;; INFO: Third attempt (detects whether we are inside any of these constructs)
 (defun verilog-beg-of-defun (&optional arg)
   "Move backward to the beginning of the current function or procedure."
   (interactive)
-  (let ((beg-of-defun-re (verilog-regexp-words '("function" "task"))))
+  (let* (
+         ;; (beg-of-defun-re (verilog-regexp-words '("function" "task" "class" "package" "module")))
+         ;; (end-of-defun-re (verilog-regexp-words '("endfunction" "endtask" "endclass" "endpackage" "endmodule")))
+         (beg-of-defun-re (verilog-regexp-words '("function" "task")))
+         (end-of-defun-re (verilog-regexp-words '("endfunction" "endtask")))
+         
+         (defun-re (concat "\\(" beg-of-defun-re "\\|" end-of-defun-re "\\)"))
+         (pos (point)))
     (unless arg
       (setq arg 1))
-    (if (< arg 0)
-        (progn
-          (verilog-re-search-forward beg-of-defun-re nil 'move)
-          (goto-char (match-beginning 0)))
-      (verilog-re-search-backward beg-of-defun-re nil 'move)
-      (goto-char (point-at-bol)))))
+    (save-excursion
+      (if (< arg 0)
+          ;; DANGER: Not covered yet
+          (when (verilog-re-search-forward beg-of-defun-re nil 'move)
+            (setq pos (match-beginning 0)))
+        ;; End of DANGER
+        (when (verilog-re-search-backward defun-re nil 'move)
+          (cond (;; beg of defun re
+                 (string-match beg-of-defun-re (match-string-no-properties 0))
+                 (setq pos (point)))
+                (;; end of defun re
+                 (string-match end-of-defun-re (match-string-no-properties 0))
+                 (verilog-backward-sexp)
+                 (setq pos (point)))
+                (;; default
+                 t
+                 (error "Something unexpected happened!"))))))
+    (goto-char pos)))
+
+(defun verilog-defun-level-up (&optional arg)
+  "Move up one defun-level."
+  (interactive)
+  ;; Order of conditions is relevant here
+  (cond ((or (verilog-in-function-p)
+             (verilog-in-task-p))
+         (verilog-re-search-backward (concat "\\(function\\|task\\)") nil 'move))
+        ((verilog-in-class-p)
+         (verilog-re-search-backward "class" nil 'move))
+        ((verilog-in-package-p)
+         (verilog-re-search-backward "package" nil 'move))
+        ((or (verilog-in-module-p)
+             (verilog-in-program-p)
+             (verilog-in-interface-p))
+         (verilog-re-search-backward (concat "\\(module\\|program\\|interface\\)") nil 'move))
+        (t
+         nil)))
+
+(defun verilog-defun-level-down (&optional arg)
+  "Move down one defun-level."
+  (interactive)
+  ;; Order of conditions is relevant here
+  (cond ((or (verilog-in-function-p)
+             (verilog-in-task-p))
+         nil)
+        ((verilog-in-class-p)
+         (verilog-re-search-forward (concat "\\(function\\|task\\)") nil 'move))
+        ((verilog-in-package-p)
+         (verilog-re-search-forward "class" nil 'move))
+        ((or (verilog-in-module-p)
+             (verilog-in-program-p))
+         (verilog-re-search-forward (concat "\\(function\\|task\\)") nil 'move))
+        (t
+         nil)))
 
 (defun verilog-beg-of-defun-quick ()
   "Move backward to the beginning of the current function or procedure.
@@ -4585,16 +4688,68 @@ Uses `verilog-scan' cache."
   (interactive)
   (verilog-re-search-backward-quick verilog-defun-re nil 'move))
 
+;; (defun verilog-end-of-defun (&optional arg)
+;;   "Move forward to the end of the current function or procedure."
+;;   (interactive)
+;;   (let ((end-of-defun-re (verilog-regexp-words '("endfunction" "endtask")))
+;;         pos)
+;;     (unless arg
+;;       (setq arg 1))
+;;     (if (< arg 0)
+;;         (verilog-re-search-backward end-of-defun-re nil 'move)
+;;       (setq pos (point))
+;;       (save-excursion
+;;         (when (verilog-re-search-forward end-of-defun-re nil 'move)
+;;           (setq pos (point))))
+;;       (goto-char pos)
+;;       (goto-char (point-at-eol)))))
+
+;; (defun verilog-end-of-defun (&optional arg)
+;;   "Move forward to the end of the current function or procedure."
+;;   (interactive)
+;;   (let ((end-of-defun-re (verilog-regexp-words '("endfunction" "endtask" "endclass")))
+;;         (pos (point)))
+;;     (unless arg
+;;       (setq arg 1))
+;;     (save-excursion
+;;       (if (< arg 0)
+;;           (when (verilog-re-search-backward end-of-defun-re nil 'move)
+;;             (setq pos (point)))
+;;         (when (verilog-re-search-forward end-of-defun-re nil 'move)
+;;           (setq pos (point-at-eol)))))
+;;     (goto-char pos)))
+
 (defun verilog-end-of-defun (&optional arg)
   "Move forward to the end of the current function or procedure."
   (interactive)
-  (let ((end-of-defun-re (verilog-regexp-words '("endfunction" "endtask"))))
+  (let* (
+         ;; (beg-of-defun-re (verilog-regexp-words '("function" "task" "class" "package" "module")))
+         ;; (end-of-defun-re (verilog-regexp-words '("endfunction" "endtask" "endclass" "endpackage" "endmodule")))
+         (beg-of-defun-re (verilog-regexp-words '("function" "task" )))
+         (end-of-defun-re (verilog-regexp-words '("endfunction" "endtask")))
+
+         (defun-re (concat "\\(" beg-of-defun-re "\\|" end-of-defun-re "\\)"))
+         (pos (point)))
     (unless arg
       (setq arg 1))
-    (if (< arg 0)
-        (verilog-re-search-backward end-of-defun-re nil 'move)
-      (verilog-re-search-forward end-of-defun-re nil 'move)
-      (goto-char (point-at-eol)))))
+    (save-excursion
+      (if (< arg 0)
+          ;; DANGER: Not covered yet
+          (when (verilog-re-search-forward beg-of-defun-re nil 'move)
+            (setq pos (match-beginning 0)))
+        ;; End of DANGER
+        (when (verilog-re-search-forward defun-re nil 'move)
+          (cond (;; beg of defun re
+                 (string-match end-of-defun-re (match-string-no-properties 0))
+                 (setq pos (point)))
+                (;; end of defun re
+                 (string-match beg-of-defun-re (match-string-no-properties 0))
+                 (verilog-forward-sexp)
+                 (setq pos (point)))
+                (;; default
+                 t
+                 (error "Something unexpected happened!"))))))
+    (goto-char pos)))
 
 (defun verilog-get-end-of-defun ()
   (save-excursion
@@ -6543,6 +6698,51 @@ Optional BOUND limits search."
 		    (setq jump t)))
 	      (if jump
 		  (beginning-of-line 2))))))))
+
+(defun verilog-in-construct-p (opener)
+  "Return non-nil if point is inside construct started by OPENER.
+Supported constructs depend on correct behavior of `verilog-forward-sexp'."
+  (let ((supported-constructs '("function" "task" "class" "module" "package" "interface" "program"))
+        (pos (point))
+        beg end)
+    (unless (member opener supported-constructs)
+      (error "verilog-in-construct-p: %s construct not supported" opener))
+    (save-excursion
+      (when (or (looking-at (concat "\\<" opener "\\>"))
+                (verilog-re-search-backward (concat "\\<" opener "\\>") nil 'move))
+        (setq beg (point))
+        (when (verilog-forward-sexp)
+          (setq end (point))
+          (and (>= pos beg)
+               (< pos end)))))))
+
+(defun verilog-in-function-p ()
+  "docstring"
+  (verilog-in-construct-p "function"))
+
+(defun verilog-in-task-p ()
+  "docstring"
+  (verilog-in-construct-p "task"))
+
+(defun verilog-in-class-p ()
+  "docstring"
+  (verilog-in-construct-p "class"))
+
+(defun verilog-in-package-p ()
+  "docstring"
+  (verilog-in-construct-p "package"))
+
+(defun verilog-in-interface-p ()
+  "docstring"
+  (verilog-in-construct-p "interface"))
+
+(defun verilog-in-module-p ()
+  "docstring"
+  (verilog-in-construct-p "module"))
+
+(defun verilog-in-program-p ()
+  "docstring"
+  (verilog-in-construct-p "program"))
 
 (defun verilog-in-comment-p ()
   "Return true if in a star or // comment."
