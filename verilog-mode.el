@@ -7092,7 +7092,7 @@ Do not count named blocks or case-statements."
                (current-column))
               ((looking-at "(") ; 2) if (condition)
                (forward-char 1)
-               (skip-chars-forward " \t\n\f" (point-at-eol))
+               (skip-chars-forward " \t\f" (point-at-eol))
                (current-column))
               ((looking-at "\\(\\<\\(virtual\\|protected\\|static\\)\\>\\s-+\\)?\\(\\<task\\>\\|\\<function\\>\\)") ; 3) Inside a function/task argument list
                (setq pos-arg-paren (save-excursion                                                   ; task foo (  input in1, input in2,
@@ -7103,6 +7103,10 @@ Do not count named blocks or case-statements."
                (if pos-arg-paren
                    pos-arg-paren
                  (+ (current-column) verilog-indent-level))) ; arg in next line after (
+              ((looking-at (concat "\\(" verilog-symbol-re "\\)\\s-*\\(" verilog-assignment-operator-re "\\)")) ; 
+               (goto-char (match-end 2))
+               (skip-chars-forward " \t\f" (point-at-eol))
+               (current-column))
               (t ; 4) Default: module parameter/port list
                (+ (current-column) verilog-indent-level)))))))
 
