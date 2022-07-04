@@ -8,7 +8,18 @@ valid_c          <= (valid &&
 (state != IDLE) &&
 (state != SKIP_DATA));
 end // initial begin
-endmodule // x
+endmodule : x
+
+
+module asdf;
+
+initial begin
+variable[i].value[0] = {signal3, signal2,
+signal1, signal0};
+end
+
+endmodule: asdf
+
 
 
 // Local Variables:

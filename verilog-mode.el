@@ -7103,8 +7103,11 @@ Do not count named blocks or case-statements."
                (if pos-arg-paren
                    pos-arg-paren
                  (+ (current-column) verilog-indent-level))) ; arg in next line after (
-              ((looking-at (concat "\\(" verilog-symbol-re "\\)\\s-*\\(" verilog-assignment-operator-re "\\)")) ; 
-               (goto-char (match-end 2))
+              ;; ((looking-at (concat "^\\s-*\\(" verilog-symbol-re "\\)\\(" verilog-range-re "\\|" verilog-symbol-re "\\|\\.\\)*\\s-*\\(" verilog-assignment-operator-re "\\)")) ; 
+              ((looking-at (concat "\\(" verilog-symbol-re "\\)\\(" verilog-range-re "\\|" verilog-symbol-re "\\|\\.\\)*\\s-*\\(" verilog-assignment-operator-re "\\)")) ; 
+               (goto-char (match-end 4))
+               (skip-chars-forward " \t\f" (point-at-eol))
+               (skip-chars-forward "{([" (1+ (point)))
                (skip-chars-forward " \t\f" (point-at-eol))
                (current-column))
               (t ; 4) Default: module parameter/port list
