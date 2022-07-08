@@ -7263,6 +7263,8 @@ Be verbose about progress unless optional QUIET set."
 	       start (progn
 		       (verilog-beg-of-statement-1)
 		       (while (and (looking-at verilog-declaration-re)
+                                   (not (verilog-at-struct-decl-p))
+                                   (not (verilog-at-enum-decl-p))
 				   (not (bobp)))
 			 (skip-chars-backward " \t")
 			 (setq e (point))
@@ -7276,7 +7278,9 @@ Be verbose about progress unless optional QUIET set."
 		     (verilog-end-of-statement)
 		     (setq e (point))	;Might be on last line
 		     (verilog-forward-syntactic-ws)
-		     (while (looking-at verilog-declaration-re)
+		     (while (and (looking-at verilog-declaration-re)
+                                 (not (verilog-at-struct-decl-p))
+                                 (not (verilog-at-enum-decl-p)))
 		       (verilog-end-of-statement)
 		       (setq e (point))
 		       (verilog-forward-syntactic-ws))

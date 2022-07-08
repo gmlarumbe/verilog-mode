@@ -1,13 +1,13 @@
 //bug844
 module device(
-	      input 		 clk,
-	      output logic [7:0] Q, out0,
-	      output logic 	 pass, fail
-	      input [7:0] 	 D, in0,in1 );
+              input clk,
+              output logic [7:0] Q, out0,
+              output logic pass, fail
+              input [7:0] D, in0,in1 );
 
-   enum 			 logic [2:0] {IDLE, START, RUN, PASS, FAIL } state, next_state;
-   logic 			 ready, next_ready;
-   logic 			 next_pass, next_fail;
+   enum logic [2:0] {IDLE, START, RUN, PASS, FAIL } state, next_state;
+   logic ready, next_ready;
+   logic next_pass, next_fail;
 
    always_ff @(posedge clk, negedge rstn)
      if (!rstn) begin
