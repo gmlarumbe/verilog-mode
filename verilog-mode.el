@@ -6780,6 +6780,42 @@ Also move point to constraint."
        (verilog-in-struct-p)
        (looking-at "}\\(?:\\s-*\\w+\\s-*\\(?:,\\s-*\\w+\\s-*\\)*\\)?;")))
 
+(defun verilog-at-struct-decl-p ()
+  "Return true if at a struct declaration."
+  (interactive)
+  (save-excursion
+    (verilog-re-search-forward "{" (point-at-eol) t)
+    (unless (bobp)
+      (backward-char))
+    (verilog-at-struct-p)))
+
+(defun verilog-at-enum-p ()
+  "If at the { of a enum, return true, not moving point."
+  (save-excursion
+    (when (equal (char-after) ?\{)
+      ;; (verilog-beg-of-statement)
+      (goto-char (point-at-bol))
+      (when (verilog-re-search-forward
+             (concat "^\\s-*\\(typedef\\s-+\\)?enum\\s-+" "\\(" verilog-declaration-core-re "\\s-*" verilog-optional-signed-range-re "\\)?")
+             (point-at-eol)
+             t)
+        t))))
+
+(defun verilog-at-enum-decl-p ()
+  "Return true if at a enum declaration."
+  (interactive)
+  ;; (let ((point-at-eos (save-excursion
+  ;;                       (verilog-end-of-statement))))
+    (save-excursion
+      ;; (verilog-re-search-forward "{" (if point-at-eos
+      ;;                                    point-at-eos
+      ;;                                  (point-at-eol)) t)
+      (verilog-re-search-forward "{" (point-at-eol) t)
+      (unless (bobp)
+        (backward-char))
+      (verilog-at-enum-p)))
+;; )
+
 (defun verilog-parenthesis-depth ()
   "Return non zero if in parenthetical-expression."
   (save-excursion (nth 1 (verilog-syntax-ppss))))
@@ -7192,7 +7228,9 @@ Be verbose about progress unless optional QUIET set."
             (beginning-of-line)
             (verilog-forward-syntactic-ws)
             (or (and (not (verilog-in-directive-p))  ; could have `define input foo
-                     (looking-at verilog-declaration-re))
+                     (looking-at verilog-declaration-re)
+                     (not (verilog-at-struct-decl-p))
+                     (not (verilog-at-enum-decl-p)))
                 (and (verilog-parenthesis-depth)
                      (looking-at verilog-interface-modport-re))))
 	  (progn
@@ -7264,7 +7302,7 @@ Be verbose about progress unless optional QUIET set."
                 (indent-line-to base-ind)
                 (verilog-forward-ws&directives)
                 (if (< (point) e)
-                    (verilog-re-search-forward "[ \t\n\f]" e 'move)))
+                    (verilog-re-search-forward "[ \t\n\f]" (marker-position endpos) 'move)))
 	       (t
                 (unless (verilog-looking-back "(" (point-at-bol))
                   (just-one-space))
