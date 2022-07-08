@@ -37,7 +37,7 @@ module tss_max32 (/*AUTOARG*/
    //Verilint 110 on  // WARNING: Incompatible width
    
    // Note because a has more bits we MUST choose it if a[31:8]==b[31:8]!
-   wire        sela = ((a[31] != b[31]) ^ alessb);
-   wire [31:0] max = (sela ? b : a);
+   wire          sela = ((a[31] != b[31]) ^ alessb);
+   wire [31:0]   max  = (sela ? b : a);
    
 endmodule
