@@ -2861,6 +2861,8 @@ find the errors."
 (defconst verilog-delay-re "#\\s-*\\(\\([0-9_]+\\('s?[hdxbo][0-9a-fA-F_xz]+\\)?\\)\\|\\(([^()]*)\\)\\|\\(\\sw+\\)\\)")
 (defconst verilog-interface-modport-re "\\(\\s-*\\([a-zA-Z0-9`_$]+\\.[a-zA-Z0-9`_$]+\\)[ \t\f]+\\)")
 (defconst verilog-comment-start-regexp "//\\|/\\*" "Dual comment value for `comment-start-regexp'.")
+(defconst verilog-typedef-enum-re
+  (concat "^\\s-*\\(typedef\\s-+\\)?enum\\s-+" "\\(" verilog-declaration-core-re "\\s-*" verilog-optional-signed-range-re "\\)?"))
 
 (defconst verilog-declaration-simple-re
   (concat "\\(" verilog-declaration-prefix-re "\\s-*\\)?" verilog-declaration-core-re))
@@ -6560,6 +6562,53 @@ Optional BOUND limits search."
 	      (if jump
 		  (beginning-of-line 2))))))))
 
+(defun verilog-pos-at-beg-of-statement ()
+  ""
+  (save-excursion
+    (verilog-beg-of-statement)
+    (point)))
+
+(defun verilog-col-at-beg-of-statement ()
+  ""
+  (save-excursion
+    (verilog-beg-of-statement)
+    (current-column)))
+
+(defun verilog-pos-at-end-of-statement ()
+  ""
+  (save-excursion
+    (verilog-end-of-statement)))
+
+(defun verilog-col-at-end-of-statement ()
+  ""
+  (save-excursion
+    (verilog-end-of-statement)
+    (current-column)))
+
+(defun verilog-pos-at-forward-syntactic-ws ()
+  ""
+  (save-excursion
+    (verilog-forward-syntactic-ws)
+    (point)))
+
+(defun verilog-col-at-forward-syntactic-ws ()
+  ""
+  (save-excursion
+    (verilog-forward-syntactic-ws)
+    (current-column)))
+
+(defun verilog-pos-at-backward-syntactic-ws ()
+  ""
+  (save-excursion
+    (verilog-backward-syntactic-ws)
+    (point)))
+
+(defun verilog-col-at-backward-syntactic-ws ()
+  ""
+  (save-excursion
+    (verilog-backward-syntactic-ws)
+    (current-column)))
+
 (defun verilog-in-comment-p ()
   "Return true if in a star or // comment."
   (let ((state (save-excursion (verilog-syntax-ppss))))
@@ -6784,6 +6833,33 @@ Also move point to constraint."
        (verilog-in-struct-p)
        (looking-at "}\\(?:\\s-*\\w+\\s-*\\(?:,\\s-*\\w+\\s-*\\)*\\)?;")))
 
+(defun verilog-at-struct-decl-p ()
+  "Return non-nil if at a struct declaration."
+  (interactive)
+  (save-excursion
+    (verilog-re-search-forward "{" (point-at-eol) t)
+    (unless (bobp)
+      (backward-char))
+    (verilog-at-struct-p)))
+
+(defun verilog-at-enum-p ()
+  "If at the { of a enum, return true, not moving point."
+  (save-excursion
+    (when (equal (char-after) ?\{)
+      (verilog-beg-of-statement)
+      (beginning-of-line)
+      (when (verilog-re-search-forward verilog-typedef-enum-re (point-at-eol) t)
+        t))))
+
+(defun verilog-at-enum-decl-p ()
+  "Return non-nil if at a enum declaration."
+  (interactive)
+  (save-excursion
+    (verilog-re-search-forward "{" (verilog-pos-at-end-of-statement) t)
+    (unless (bobp)
+      (backward-char))
+    (verilog-at-enum-p)))
+
 (defun verilog-parenthesis-depth ()
   "Return non zero if in parenthetical-expression."
   (save-excursion (nth 1 (verilog-syntax-ppss))))
@@ -6953,7 +7029,8 @@ Only look at a few lines to determine indent level."
 	   (= (preceding-char) ?\,)
 	   (save-excursion
 	     (verilog-beg-of-statement-1)
-	     (looking-at (verilog-get-declaration-re))))
+	     (and (looking-at (verilog-get-declaration-re))
+                  (not (verilog-at-enum-decl-p)))))
 	  (let* ( fst
 		  (val
 		   (save-excursion
@@ -7061,7 +7138,9 @@ Only look at a few lines to determine indent level."
            ;; Do not consider "virtual function", "virtual task", "virtual class"
            ;; as declarations
            (not (looking-at (concat (verilog-get-declaration-re)
-                                    "\\s-+\\(function\\|task\\|class\\)\\b"))))
+                                    "\\s-+\\(function\\|task\\|class\\)\\b")))
+           (not (verilog-at-struct-decl-p))
+           (not (verilog-at-enum-decl-p)))
       (verilog-indent-declaration ind))
 
      (;-- form feeds - ignored as bug in indent-line-to in < 24.5
@@ -7108,7 +7187,7 @@ Do not count named blocks or case-statements."
 
 (defun verilog-cparenexp-indent-level ()
   "Return indent level for current line inside a parenthetical expression."
-  (let ((close-par (looking-at ")"))
+  (let ((close-par (looking-at "[)}]"))
         pos-arg-paren)
     (save-excursion
       (verilog-backward-up-list 1)
@@ -7122,12 +7201,16 @@ Do not count named blocks or case-statements."
         (when (looking-at "\\<\\(function\\|task\\)\\>")
           (verilog-beg-of-statement)) ; find virtual/protected/static
         (cond (;; 1) Closing ); of a module/function/task
-               close-par
+               (and close-par
+                    (save-excursion
+                      (verilog-beg-of-statement-1)
+                      (goto-char (point-at-bol))
+                      (not (looking-at verilog-assignment-operation-re))))
                (current-column))
               (;; 2) if (condition)
                (looking-at "(")
                (forward-char 1)
-               (skip-chars-forward " \t\n\f" (point-at-eol))
+               (skip-chars-forward " \t\f" (point-at-eol))
                (current-column))
               (;; 3) Inside a function/task argument list
                (looking-at "\\(\\<\\(virtual\\|protected\\|static\\)\\>\\s-+\\)?\\(\\<task\\>\\|\\<function\\>\\)")
@@ -7139,8 +7222,21 @@ Do not count named blocks or case-statements."
                (or pos-arg-paren
                    ;; arg in next line after (
                    (+ (current-column) verilog-indent-level)))
-              (;; 4) Default: module parameter/port list
-               t
+              (;; 4) Assignment operation
+               (looking-at (concat "\\(" verilog-symbol-re "\\)\\(" verilog-range-re "\\|" verilog-symbol-re "\\|\\.\\)*\\s-*\\(" verilog-assignment-operator-re "\\)")) ; 
+               (goto-char (match-end 4))
+               (skip-chars-forward " \t\f" (point-at-eol))
+               (skip-chars-forward "{(" (1+ (point)))
+               (skip-chars-forward " \t\f" (point-at-eol))
+               (current-column))
+              ;; TODO: Check this thing of mixing `verilog-beg-of-statement' and `verilog-beg-of-statement-1'
+              (;; 5) Typedef enum declaration
+               (verilog-at-enum-decl-p)
+               (verilog-re-search-forward "{" (verilog-pos-at-end-of-statement) t)
+               (if (> (verilog-pos-at-forward-syntactic-ws) (point-at-eol))
+                   (+ (verilog-col-at-beg-of-statement) verilog-indent-level)
+                 (verilog-col-at-forward-syntactic-ws)))
+              (t ;; 6) Default: module parameter/port list
                (+ (current-column) verilog-indent-level)))))))
 
 (defun verilog-indent-comment ()
@@ -7221,7 +7317,9 @@ Be verbose about progress unless optional QUIET set."
             (beginning-of-line)
             (verilog-forward-syntactic-ws)
             (or (and (not (verilog-in-directive-p))  ; could have `define input foo
-                     (looking-at (verilog-get-declaration-re)))
+                     (looking-at (verilog-get-declaration-re))
+                     (not (verilog-at-struct-decl-p))
+                     (not (verilog-at-enum-decl-p)))
                 (and (verilog-parenthesis-depth)
                      (looking-at verilog-interface-modport-re))))
 	  (progn
@@ -7254,6 +7352,8 @@ Be verbose about progress unless optional QUIET set."
 	       start (progn
 		       (verilog-beg-of-statement-1)
 		       (while (and (looking-at (verilog-get-declaration-re))
+                                   (not (verilog-at-struct-decl-p))
+                                   (not (verilog-at-enum-decl-p))
 				   (not (bobp)))
 			 (skip-chars-backward " \t")
 			 (setq e (point))
@@ -7267,7 +7367,9 @@ Be verbose about progress unless optional QUIET set."
 		     (verilog-end-of-statement)
 		     (setq e (point))	;Might be on last line
 		     (verilog-forward-syntactic-ws)
-		     (while (looking-at (verilog-get-declaration-re))
+		     (while (and (looking-at (verilog-get-declaration-re))
+                                 (not (verilog-at-struct-decl-p))
+                                 (not (verilog-at-enum-decl-p)))
 		       (verilog-end-of-statement)
 		       (setq e (point))
 		       (verilog-forward-syntactic-ws))

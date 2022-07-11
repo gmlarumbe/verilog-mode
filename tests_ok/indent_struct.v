@@ -38,8 +38,9 @@ module foo (
             input  c;
             output d;
             );
+   
    always @(a) g;
    
    
-   
 endmodule // foo
+
