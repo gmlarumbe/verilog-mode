@@ -7283,11 +7283,12 @@ Be verbose about progress unless optional QUIET set."
                 (indent-line-to base-ind)
                 (verilog-forward-ws&directives)
                 (if (< (point) e)
-                    (verilog-re-search-forward "[ \t\n\f]" (marker-position endpos) 'move)))
+                    (re-search-forward "[ \t\n\f]" (marker-position endpos) 'move)))
 	       (t
-                (unless (verilog-looking-back "(" (point-at-bol))
+                (unless (or (verilog-in-comment-or-string-p)
+                            (verilog-looking-back "(" (point-at-bol)))
                   (just-one-space))
-		(verilog-re-search-forward "[ \t\n\f]" e 'move))))
+                (re-search-forward "[ \t\n\f]" e 'move))))
 	    ;; Now find biggest prefix
 	    (setq ind (verilog-get-lineup-indent (marker-position startpos) endpos))
 	    ;; Now indent each line.
