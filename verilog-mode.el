@@ -7313,9 +7313,10 @@ _ARG is ignored, for `comment-indent-function' compatibility."
           (just-one-space))
         (re-search-forward "[ \t\n\f]" e 'move))))))
 
-(defun verilog--pretty-declarations-indent-lines (startpos endpos ind m1 quiet)
+(defun verilog--pretty-declarations-indent-lines (startpos endpos ind quiet)
   ""
-  (let (e r)
+  (let ((m1 (make-marker))
+        e r)
     (goto-char (marker-position startpos))
     (while (progn (setq e (marker-position endpos))
 		  (setq r (- e (point)))
@@ -7376,8 +7377,7 @@ _ARG is ignored, for `comment-indent-function' compatibility."
   "Line up declarations around point.
 Be verbose about progress unless optional QUIET set."
   (interactive)
-  (let ((m1 (make-marker))
-	(here (point))
+  (let ((here (point))
 	ind start startpos end endpos base-ind
         boundaries)
     (save-excursion
@@ -7399,9 +7399,9 @@ Be verbose about progress unless optional QUIET set."
 	    ;; Get the beginning of line indent first
 	    (verilog--pretty-declarations-get-beg-line-indent endpos base-ind)
 	    ;; Now find biggest prefix
-	    (setq ind (verilog-get-lineup-indent (marker-position startpos) endpos))
+	    (setq ind (verilog-get-lineup-indent startpos endpos))
 	    ;; Now indent each line.
-	    (verilog--pretty-declarations-indent-lines startpos endpos ind m1 quiet)
+	    (verilog--pretty-declarations-indent-lines startpos endpos ind quiet)
             ;; Align comments
             (when verilog-align-declaration-comments
               (verilog--pretty-declarations-align-comments startpos endpos)))
@@ -7586,14 +7586,16 @@ BASEIND is the base indent to offset everything."
               (indent-to ind 1))))))
     (goto-char pos)))
 
-(defun verilog-get-lineup-indent (b edpos)
+(defun verilog-get-lineup-indent (begin endpos)
   "Return the indent level that will line up several lines within the region.
-Region is defined by B and EDPOS."
+Region is defined by BEGIN and ENDPOS."
   (save-excursion
-    (let ((ind 0) e)
+    (let ((ind 0)
+          (b (marker-position begin))
+          e)
       (goto-char b)
       ;; Get rightmost position
-      (while (progn (setq e (marker-position edpos))
+      (while (progn (setq e (marker-position endpos))
 		    (< (point) e))
 	(when (verilog-re-search-forward (verilog-get-declaration-re 'iface-mp) e 'move)
 	  (goto-char (match-end 0))
