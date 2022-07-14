@@ -7265,6 +7265,7 @@ _ARG is ignored, for `comment-indent-function' compatibility."
           ;; In a declaration block (not in argument list)
           (t
            (setq start (progn
+                         (setq e here)
                          (verilog-beg-of-statement-1)
                          (while (and (looking-at (verilog-get-declaration-re))
                                      (not (bobp)))
