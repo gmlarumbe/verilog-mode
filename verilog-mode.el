@@ -7194,20 +7194,176 @@ _ARG is ignored, for `comment-indent-function' compatibility."
 
 ;; TODO:
 (defun verilog--pretty-declarations-decl-found-p ()
-  "docstring"
-  (let ((rbegin (region-beginning))
-        (rend (region-end)))
-    (if (region-active-p)
-        (progn
-          (goto-char rbegin)
-          (verilog-re-search-forward (verilog-get-declaration-re 'iface-mp) rend 'move))
-      ;; If not using region
-      (beginning-of-line)
-      (verilog-forward-syntactic-ws)
-      (or (and (not (verilog-in-directive-p))  ; could have `define input foo
-               (looking-at (verilog-get-declaration-re)))
-          (and (verilog-parenthesis-depth)
-               (looking-at verilog-interface-modport-re))))))
+  ""
+  (if (region-active-p)
+      (let ((rbegin (region-beginning))
+            (rend (region-end)))
+        (goto-char rbegin)
+        (verilog-re-search-forward (verilog-get-declaration-re 'iface-mp) rend 'move))
+    ;; If not using region
+    (beginning-of-line)
+    (verilog-forward-syntactic-ws)
+    (or (and (not (verilog-in-directive-p))  ; could have `define input foo
+             (looking-at (verilog-get-declaration-re)))
+        (and (verilog-parenthesis-depth)
+             (looking-at verilog-interface-modport-re)))))
+
+(defun verilog--pretty-declarations-find-boundaries (here)
+  ""
+  (let (el e start startpos end endpos base-ind)
+    (cond (;; Using region
+           (region-active-p)
+           (let ((rstart (region-beginning))
+                 (rend (region-end))
+                 (rstart-paren-min (save-excursion
+                                     (verilog-backward-up-list 1)
+                                     (unless (eobp)
+                                       (forward-char))
+                                     (verilog-forward-syntactic-ws)
+                                     (point)))
+                 (rend-paren-max (save-excursion
+                                   (verilog-backward-up-list -1)
+                                   (unless (bobp)
+                                     (backward-char))
+                                   (verilog-backward-syntactic-ws)
+                                   (point-at-eol))))
+             (setq el (verilog-backward-up-list -1))
+             (setq start (max rstart rstart-paren-min))
+	     (setq startpos (set-marker (make-marker) start))
+             (setq end (min rend rend-paren-max))
+	     (setq endpos (set-marker (make-marker) end))
+	     (setq base-ind (progn
+			      (goto-char start)
+                              (unless (verilog-looking-back "(" (point-at-bol))
+                                (forward-char 1))
+			      (skip-chars-forward " \t")
+			      (current-column)))))
+          ;; In an argument list or parameter block
+          ((verilog-parenthesis-depth)
+           (setq el (verilog-backward-up-list -1))
+           (setq start (progn
+                         (goto-char here)
+                         (verilog-backward-up-list 1)
+                         (verilog-re-search-forward (verilog-get-declaration-re 'iface-mp) el 'move)
+                         (goto-char (match-beginning 0))
+                         (skip-chars-backward " \t")
+                         (point)))
+	   (setq startpos (set-marker (make-marker) start))
+           (setq end (progn
+                       (goto-char start)
+                       (verilog-backward-up-list -1)
+                       (forward-char -1)
+                       (verilog-backward-syntactic-ws)
+                       (point)))
+	   (setq endpos (set-marker (make-marker) end))
+	   (setq base-ind (progn
+			    (goto-char start)
+                            (unless (verilog-looking-back "(" (point-at-bol))
+                              (forward-char 1))
+			    (skip-chars-forward " \t")
+			    (current-column))))
+          ;; In a declaration block (not in argument list)
+          (t
+           (setq start (progn
+                         (verilog-beg-of-statement-1)
+                         (while (and (looking-at (verilog-get-declaration-re))
+                                     (not (bobp)))
+                           (skip-chars-backward " \t")
+                           (setq e (point))
+                           (verilog-backward-syntactic-ws)
+                           (backward-char)
+                           (verilog-beg-of-statement-1))
+                         e))
+           (setq startpos (set-marker (make-marker) start))
+           (setq end (progn
+                       (goto-char here)
+                       (verilog-end-of-statement)
+                       (setq e (point))   ;Might be on last line
+                       (verilog-forward-syntactic-ws)
+                       (while (looking-at (verilog-get-declaration-re))
+                         (verilog-end-of-statement)
+                         (setq e (point))
+                         (verilog-forward-syntactic-ws))
+                       e))
+           (setq endpos (set-marker (make-marker) end))
+           (setq base-ind (progn
+		            (goto-char start)
+		            (verilog-do-indent (verilog-calculate-indent))
+		            (verilog-forward-ws&directives)
+		            (current-column)))))
+    (list start startpos end endpos base-ind)))
+
+(defun verilog--pretty-declarations-get-beg-line-indent (endpos base-ind)
+  ""
+  (let (e)
+    (while (progn (setq e (marker-position endpos))
+		  (< (point) e))
+      (cond
+       ((save-excursion (skip-chars-backward " \t")
+		        (bolp))
+        (verilog-forward-ws&directives)
+        (indent-line-to base-ind)
+        (verilog-forward-ws&directives)
+        (if (< (point) e)
+            (re-search-forward "[ \t\n\f]" (marker-position endpos) 'move)))
+       (t
+        (unless (or (verilog-in-comment-or-string-p)
+                    (verilog-looking-back "(" (point-at-bol)))
+          (just-one-space))
+        (re-search-forward "[ \t\n\f]" e 'move))))))
+
+(defun verilog--pretty-declarations-indent-lines (startpos endpos ind m1 quiet)
+  ""
+  (let (e r)
+    (goto-char (marker-position startpos))
+    (while (progn (setq e (marker-position endpos))
+		  (setq r (- e (point)))
+		  (> r 0))
+      (setq e (point))
+      (unless quiet (message "%d" r))
+      (verilog-forward-ws&directives)
+      (cond
+       ((looking-at (verilog-get-declaration-re 'iface-mp))
+        (unless (looking-at (verilog-get-declaration-re 'embedded-comments))
+          (let ((p (match-end 0)))
+            (set-marker m1 p)
+            (if (verilog-re-search-forward "[[#`]" p 'move)
+                (progn
+                  (forward-char -1)
+                  (just-one-space)
+                  (goto-char (marker-position m1))
+                  (delete-horizontal-space)
+                  (indent-to ind 1))
+              (progn
+                (delete-horizontal-space)
+                (indent-to ind 1))))))
+       ((verilog-continued-line-1 (marker-position startpos))
+        (goto-char e)
+        (unless (and (verilog-in-parenthesis-p)
+                     (looking-at (concat "\\s-*" verilog-symbol-re "\\s-+" verilog-symbol-re "\\s-*")))
+          (indent-line-to ind)))
+       ((verilog-in-struct-p)
+        ;; could have a declaration of a user defined item
+        (goto-char e)
+        (verilog-end-of-statement))
+       (t		; Must be comment or white space
+        (goto-char e)
+        (verilog-forward-ws&directives)
+        (forward-line -1)))
+      (forward-line 1))))
+
+(defun verilog--pretty-declarations-align-comments (startpos endpos)
+  ""
+  (let ((comm-ind (verilog-get-comment-align-indent (marker-position startpos) endpos))
+        e)
+    (save-excursion
+      (goto-char (marker-position startpos))
+      (while (progn (setq e (marker-position endpos))
+                    (< (point) e))
+        (when (verilog-search-comment-in-declaration e)
+          (goto-char (match-beginning 0))
+          (delete-horizontal-space)
+          (indent-to (1- (+ comm-ind verilog-align-comment-distance))))))))
 
 (defun verilog-pretty-declarations-auto (&optional quiet)
   "Call `verilog-pretty-declarations' QUIET based on `verilog-auto-lineup'."
@@ -7215,163 +7371,39 @@ _ARG is ignored, for `comment-indent-function' compatibility."
 	    (eq 'declarations verilog-auto-lineup))
     (verilog-pretty-declarations quiet)))
 
-;; TODO: Still fixing
 (defun verilog-pretty-declarations (&optional quiet)
   "Line up declarations around point.
 Be verbose about progress unless optional QUIET set."
   (interactive)
   (let ((m1 (make-marker))
-        (e (point))
 	(here (point))
-        (rstart (region-beginning))
-        (rend (region-end))
-        (rstart-paren-min (save-excursion
-                            (verilog-backward-up-list 1)
-                            (unless (eobp)
-                              (forward-char))
-                            (verilog-forward-syntactic-ws)
-                            (point)))
-        (rend-paren-max (save-excursion
-                          (verilog-backward-up-list -1)
-                          (unless (bobp)
-                            (backward-char))
-                          (verilog-backward-syntactic-ws)
-                          (point-at-eol)))
-	el r ind start startpos end endpos base-ind comm-ind)
+	ind start startpos end endpos base-ind
+        boundaries)
     (save-excursion
       ;; Check if current line is a declaration
       (if (verilog--pretty-declarations-decl-found-p)
-	  ;; In an argument list or parameter block
-	  (progn
-	    (if (verilog-parenthesis-depth)
-		(setq el (verilog-backward-up-list -1)
-                      start (if (region-active-p)
-                                (max rstart rstart-paren-min)
-                              (goto-char e)
-                              (verilog-backward-up-list 1)
-                              (verilog-re-search-forward (verilog-get-declaration-re 'iface-mp) el 'move)
-                              (goto-char (match-beginning 0))
-                              (skip-chars-backward " \t")
-                              (point))
-		      startpos (set-marker (make-marker) start)
-                      end (if (region-active-p)
-                              (min rend rend-paren-max)
-                            (goto-char start)
-                            (verilog-backward-up-list -1)
-                            (forward-char -1)
-                            (verilog-backward-syntactic-ws)
-                            (point))
-		      endpos (set-marker (make-marker) end)
-		      base-ind (progn
-				 (goto-char start)
-                                 (unless (verilog-looking-back "(" (point-at-bol))
-                                   (forward-char 1))
-				 (skip-chars-forward " \t")
-				 (current-column)))
-	      ;; In a declaration block (not in argument list)
-	      (setq
-               start (progn
-                       (verilog-beg-of-statement-1)
-                       (while (and (looking-at (verilog-get-declaration-re))
-                                   (not (bobp)))
-                         (skip-chars-backward " \t")
-                         (setq e (point))
-                         (verilog-backward-syntactic-ws)
-                         (backward-char)
-                         (verilog-beg-of-statement-1))
-                       (if (region-active-p)
-                           (max e rstart)
-                         e))
-               startpos (set-marker (make-marker) start)
-               end (progn
-                     (goto-char here)
-                     (verilog-end-of-statement)
-                     (setq e (point))   ;Might be on last line
-                     (verilog-forward-syntactic-ws)
-                     (while (looking-at (verilog-get-declaration-re))
-                       (verilog-end-of-statement)
-                       (setq e (point))
-                       (verilog-forward-syntactic-ws))
-                     (if (region-active-p)
-                         (min e rend)
-                       e))
-	       endpos (set-marker (make-marker) end)
-	       base-ind (progn
-			  (goto-char start)
-			  (verilog-do-indent (verilog-calculate-indent))
-			  (verilog-forward-ws&directives)
-			  (current-column))))
+          (progn
+            (setq boundaries (verilog--pretty-declarations-find-boundaries here))
+            ;; TODO: Implement as property list?
+            (setq start (nth 0 boundaries))
+            (setq startpos (nth 1 boundaries))
+            (setq end (nth 2 boundaries))
+            (setq endpos (nth 3 boundaries))
+            (setq base-ind (nth 4 boundaries))
 	    ;; OK, start and end are set
 	    (goto-char (marker-position startpos))
 	    (if (and (not quiet)
 		     (> (- end start) 100))
 		(message "Lining up declarations..(please stand by)"))
 	    ;; Get the beginning of line indent first
-	    (while (progn (setq e (marker-position endpos))
-			  (< (point) e))
-	      (cond
-	       ((save-excursion (skip-chars-backward " \t")
-				(bolp))
-                (verilog-forward-ws&directives)
-                (indent-line-to base-ind)
-                (verilog-forward-ws&directives)
-                (if (< (point) e)
-                    (re-search-forward "[ \t\n\f]" (marker-position endpos) 'move)))
-	       (t
-                (unless (or (verilog-in-comment-or-string-p)
-                            (verilog-looking-back "(" (point-at-bol)))
-                  (just-one-space))
-                (re-search-forward "[ \t\n\f]" e 'move))))
+	    (verilog--pretty-declarations-get-beg-line-indent endpos base-ind)
 	    ;; Now find biggest prefix
 	    (setq ind (verilog-get-lineup-indent (marker-position startpos) endpos))
 	    ;; Now indent each line.
-	    (goto-char (marker-position startpos))
-	    (while (progn (setq e (marker-position endpos))
-			  (setq r (- e (point)))
-			  (> r 0))
-	      (setq e (point))
-	      (unless quiet (message "%d" r))
-	      (verilog-forward-ws&directives)
-	      (cond
-	       ((looking-at (verilog-get-declaration-re 'iface-mp))
-                (unless (looking-at (verilog-get-declaration-re 'embedded-comments))
-                  (let ((p (match-end 0)))
-                    (set-marker m1 p)
-                    (if (verilog-re-search-forward "[[#`]" p 'move)
-                        (progn
-                          (forward-char -1)
-                          (just-one-space)
-                          (goto-char (marker-position m1))
-                          (delete-horizontal-space)
-                          (indent-to ind 1))
-                      (progn
-                        (delete-horizontal-space)
-                        (indent-to ind 1))))))
-	       ((verilog-continued-line-1 (marker-position startpos))
-		(goto-char e)
-                (unless (and (verilog-in-parenthesis-p)
-                             (looking-at (concat "\\s-*" verilog-symbol-re "\\s-+" verilog-symbol-re "\\s-*")))
-                  (indent-line-to ind)))
-	       ((verilog-in-struct-p)
-		;; could have a declaration of a user defined item
-		(goto-char e)
-		(verilog-end-of-statement))
-	       (t		; Must be comment or white space
-		(goto-char e)
-		(verilog-forward-ws&directives)
-		(forward-line -1)))
-	      (forward-line 1))
+	    (verilog--pretty-declarations-indent-lines startpos endpos ind m1 quiet)
             ;; Align comments
             (when verilog-align-declaration-comments
-              (setq comm-ind (verilog-get-comment-align-indent (marker-position startpos) endpos))
-              (save-excursion
-                (goto-char (marker-position startpos))
-                (while (progn (setq e (marker-position endpos))
-                              (< (point) e))
-                  (when (verilog-search-comment-in-declaration e)
-                    (goto-char (match-beginning 0))
-                    (delete-horizontal-space)
-                    (indent-to (1- (+ comm-ind verilog-align-comment-distance))))))))
+              (verilog--pretty-declarations-align-comments startpos endpos)))
         ;; Declaration not found in current line
 	(unless quiet (message "Unable to find a declaration in this line"))))))
 
