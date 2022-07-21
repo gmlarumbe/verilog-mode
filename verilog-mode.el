@@ -7494,12 +7494,14 @@ If returned non-nil, update match data according to `verilog-assignment-operatio
   "Line up expressions around point.
 If QUIET is non-nil, do not print messages showing the progress of line-up."
   (interactive)
-  (let ((discard-re-complete (concat "^\\s-*" (if verilog-align-assign-expr
-                                                 verilog-complete-no-assign-re
-                                               verilog-complete-re)))
-        (discard-re-basic (concat "^\\s-*" (if verilog-align-assign-expr
-                                              verilog-basic-complete-no-assign-re
-                                            verilog-basic-complete-re))))
+  (let ((discard-re-complete (concat "^\\s-*\\(" (if verilog-align-assign-expr
+                                                  verilog-complete-no-assign-re
+                                                verilog-complete-re)
+                                     "\\)"))
+        (discard-re-basic (concat "^\\s-*\\(" (if verilog-align-assign-expr
+                                               verilog-basic-complete-no-assign-re
+                                             verilog-basic-complete-re)
+                                  "\\)")))
     (unless (verilog-in-comment-or-string-p)
       (save-excursion
         (beginning-of-line)

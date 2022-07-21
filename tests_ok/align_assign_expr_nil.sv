@@ -11,7 +11,7 @@ module asdf (
    logic             temp2 = 1'b0;
    logic signed      temp3 = '0;
    
-   assign o1               = &i;
+   assign o1 = &i;
    assign o2[1:0] = i[1:0];
    assign o2[WIDTH-1:2] = i[3:0];
    assign o3[0] = i;
