@@ -7451,12 +7451,14 @@ Be verbose about progress unless optional QUIET set."
         ;; Exit
 	(unless quiet (message ""))))))
 
-(defun verilog--pretty-expr-assignment-found (discard-re)
+(defun verilog--pretty-expr-assignment-found (&optional discard-re)
   "Return non-nil if point is at a valid assignment operation to be aligned.
 Ensure cursor is not over DISCARD-RE (e.g. Verilog keywords).
 If returned non-nil, update match data according to `verilog-assignment-operation-re'."
   ;; Not looking at a verilog keyword sentence (i.e looking at a potential assignment)
-  (and (not (looking-at discard-re))
+  (and (if discard-re
+           (not (looking-at discard-re))
+         t)
        ;; Don't work on multiline assignments unless they are continued lines
        ;; e.g, multiple parameters or variable declarations in the same statement
        (if (save-excursion
@@ -7473,12 +7475,12 @@ If returned non-nil, update match data according to `verilog-assignment-operatio
   "Line up expressions around point.
 If QUIET is non-nil, do not print messages showing the progress of line-up."
   (interactive)
-  (let ((discard-re-complete (concat "^\\s-*" verilog-complete-re))
-        (discard-re-basic (concat "^\\s-*" verilog-basic-complete-re)))
+  (let ((discard-re-complete (concat "^\\s-*\\(" verilog-complete-re "\\)"))
+        (discard-re-basic (concat "^\\s-*\\(" verilog-basic-complete-re "\\)")))
     (unless (verilog-in-comment-or-string-p)
       (save-excursion
         (beginning-of-line)
-        (when (and (verilog--pretty-expr-assignment-found discard-re-complete)
+        (when (and (verilog--pretty-expr-assignment-found)
                    (save-excursion
                      (goto-char (match-end 2))
                      (and (not (verilog-in-attribute-p))
@@ -7489,7 +7491,7 @@ If QUIET is non-nil, do not print messages showing the progress of line-up."
                           (let ((pt (point)))
                             (verilog-backward-syntactic-ws)
                             (beginning-of-line)
-                            (while (and (verilog--pretty-expr-assignment-found discard-re-basic)
+                            (while (and (verilog--pretty-expr-assignment-found discard-re-complete)
                                         (not (bobp)))
                               (setq pt (point))
                               (verilog-backward-syntactic-ws)
@@ -7500,7 +7502,7 @@ If QUIET is non-nil, do not print messages showing the progress of line-up."
                         (let ((pt (point))) ; Might be on last line
                           (verilog-forward-syntactic-ws)
                           (beginning-of-line)
-                          (while (and (verilog--pretty-expr-assignment-found discard-re-basic)
+                          (while (and (verilog--pretty-expr-assignment-found discard-re-complete)
                                       (progn
                                         (end-of-line)
                                         (not (eq pt (point)))))
