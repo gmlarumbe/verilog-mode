@@ -4036,11 +4036,12 @@ Use filename, if current buffer being edited shorten to just buffer name."
          verilog-declaration-or-iface-mp-re)
         ((equal type 'embedded-comments)
          verilog-declaration-embedded-comments-re)
-        (verilog-indent-declaration-macros
-         verilog-declaration-re-macro)
         ;; TODO: Do some refactor here
         ((verilog-at-typedef-decl-p)
          (verilog-at-typedef-decl-p))
+        ;; End of TODO
+        (verilog-indent-declaration-macros
+         verilog-declaration-re-macro)
         (t
          verilog-declaration-re)))
 
@@ -7469,7 +7470,8 @@ Be verbose about progress unless optional QUIET set."
 	      (unless quiet (message "%d" r))
 	      (verilog-forward-ws&directives)
 	      (cond
-	       ((looking-at (verilog-get-declaration-re 'iface-mp))
+	       ((or (verilog-at-typedef-decl-p)  ;TODO: Refactor inside `verilog-get-declaration-re'. Has precedence over iface-mp case
+                    (looking-at (verilog-get-declaration-re 'iface-mp)))
                 (unless (looking-at (verilog-get-declaration-re 'embedded-comments))
                   (let ((p (match-end 0)))
                     (set-marker m1 p)
@@ -7730,12 +7732,10 @@ Region is defined by B and EDPOS."
       (while (progn (setq e (marker-position edpos))
                     ;; TODO: Do some refactoring here?
                     ;; Similar order than in `verilog-pretty-declarations', could be refactored?
-                    (setq re (cond (verilog-indent-declaration-macros
-                                    verilog-declaration-re-1-macro)
-                                   ((verilog-at-typedef-decl-p)
+                    (setq re (cond ((verilog-at-typedef-decl-p)
                                     (verilog-at-typedef-decl-p))
-                                   ((looking-at verilog-declaration-or-iface-mp-re-2-no-macro)
-                                    verilog-declaration-or-iface-mp-re-2-no-macro)
+                                   ((verilog-get-declaration-re)
+                                    (verilog-get-declaration-re))
                                    (t
                                     nil)))
 		    (< (point) e))
