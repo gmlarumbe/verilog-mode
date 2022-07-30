@@ -90,7 +90,7 @@ module testmodule (/*AUTOARG*/
    
    always @ (/*AUTOSENSE*/in1 or in2 or in3) begin
       {outw1 [ffs(in1)], outw2 [ffs(in2)]} = 2'b10;
-      {outw3[(|in1)?in2:in3], outb2}       = 2'b10;
+      {outw3[(|in1)?in2:in3], outb2} = 2'b10;
    end
    
    initial memarry[0] = in2;
@@ -108,7 +108,7 @@ module testmodule (/*AUTOARG*/
    
    parameter READ = 3'b111,
              //WRITE = 3'b111,
-             CFG = 3'b010;
+             CFG  = 3'b010;
    //supply1   one;
    
    always @(/*AUTOSENSE*/in1 or in2) begin

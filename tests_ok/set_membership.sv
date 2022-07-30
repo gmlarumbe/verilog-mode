@@ -9,7 +9,7 @@ module top;
    
    initial begin
       $display ("---- A or B inside {0,8'hFF} ----");
-      for (i = 1; i<=5; i++) begin
+      for (i  = 1; i<=5; i++) begin
          req = new();
          assert( a() with {A} );
          req.randomize()
@@ -23,7 +23,7 @@ module top;
          $display;
          $display ("---- op  inside [add_op : mul_op] ----");
          
-         for (i = 1; i<=10; i++) begin
+         for (i  = 1; i<=10; i++) begin
             req = new();
             assert(
                    req.randomize() with

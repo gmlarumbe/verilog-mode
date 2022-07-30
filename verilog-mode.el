@@ -2528,6 +2528,7 @@ find the errors."
    ;; "\\(^\\s-*[A-Za-z0-9_]+\\(\\[\\([A-Za-z0-9_]+\\)\\]\\)*\\s-*\\)"
    ;; "\\(^\\s-*[^=<>+-*/%&|^:\\s-]+[^=<>+-*/%&|^\n]*?\\)"
    "\\(^.*?\\)" "\\B" verilog-assignment-operator-re "\\B" ))
+   ;; "\\(.*?\\)" "\\B" verilog-assignment-operator-re "\\B" ))
 
 (defconst verilog-label-re (concat verilog-symbol-re "\\s-*:\\s-*"))
 (defconst verilog-property-re
@@ -3043,7 +3044,7 @@ find the errors."
      '(
        "always" "assign" "always_latch" "always_ff" "always_comb" "analog" "connectmodule" "constraint"
        "import" "initial" "final" "module" "macromodule" "repeat" "randcase" "while"
-       "if" "for" "forever" "foreach" "else" "parameter" "do" "localparam" "assert"
+       "if" "for" "forever" "foreach" "else" "do" "localparam" "assert"
        ))))
 (defconst verilog-complete-no-default-re
   (concat
@@ -7473,7 +7474,8 @@ If returned non-nil, update match data according to `verilog-assignment-operatio
        ;; Don't work on multiline assignments unless they are continued lines
        ;; e.g, multiple parameters or variable declarations in the same statement
        (if (save-excursion
-             (and (verilog-continued-line)
+             (and (not (looking-at "("))
+                  (verilog-continued-line)
                   (not (looking-at verilog-basic-complete-re))))
            (save-excursion
              (verilog-beg-of-statement-1)
@@ -7505,12 +7507,14 @@ If QUIET is non-nil, do not print messages showing the progress of line-up."
                             (beginning-of-line)
                             (let ((pt (point)))
                               (verilog-backward-syntactic-ws)
-                              (beginning-of-line)
+                              (verilog-re-search-backward "(" (point-at-bol) 'move) ; 
+                              ;; (beginning-of-line)
                               (while (and (verilog--pretty-expr-assignment-found discard-re-line)
                                           (not (bobp)))
                                 (setq pt (point))
                                 (verilog-backward-syntactic-ws)
-                                (beginning-of-line)) ; Ack, need to grok `define
+                                (beginning-of-line)
+                                ) ; Ack, need to grok `define
                               pt))))
                  (end (if (and (looking-at discard-re-line)
                                (looking-at verilog-assignment-operation-re))
@@ -7531,7 +7535,8 @@ If QUIET is non-nil, do not print messages showing the progress of line-up."
                  (contains-2-char-operator (string-match "<=" (buffer-substring-no-properties start end)))
                  (endmark (set-marker (make-marker) end)))
             (goto-char start)
-            (verilog-do-indent (verilog-calculate-indent))
+            ;; (verilog-do-indent (verilog-calculate-indent))
+            ;; (indent-to (verilog-calculate-indent))
             (when (and (not quiet)
                        (> (- end start) 100))
               (message "Lining up expressions.. (please stand by)"))
@@ -7542,7 +7547,7 @@ If QUIET is non-nil, do not print messages showing the progress of line-up."
               (beginning-of-line)
               (save-excursion
                 (verilog-just-one-space verilog-assignment-operation-re))
-              (verilog-do-indent (verilog-calculate-indent))
+              ;; (verilog-do-indent (verilog-calculate-indent))
               (end-of-line)
               (verilog-forward-syntactic-ws))
 
@@ -7559,8 +7564,10 @@ If QUIET is non-nil, do not print messages showing the progress of line-up."
                 (cond
                  ((looking-at verilog-assignment-operation-re)
                   (goto-char (match-beginning 2))
-                  (unless (or (verilog-in-parenthesis-p) ; Leave attributes and comparisons alone
-                              (verilog-in-coverage-p))
+                  (unless
+                      ;; (or (verilog-in-parenthesis-p) ; Leave attributes and comparisons alone
+                          (verilog-in-coverage-p)
+                          ;; )
                     (if (and contains-2-char-operator
                              (eq (char-after) ?=))
                         (indent-to (1+ ind)) ; Line up the = of the <= with surrounding =

@@ -1,10 +1,10 @@
 module x;
    initial begin
       startc_c <= (valid && (state == THE_START));
-      end_c    <= (valid && (state == THE_END));
-      valid_c  <= (valid &&
-                   (state != IDLE) &&
-                   (state != SKIP_DATA));
+      end_c <= (valid && (state == THE_END));
+      valid_c <= (valid &&
+                  (state              != IDLE) &&
+                  (state              != SKIP_DATA));
    end // initial begin
 endmodule : x
 
@@ -12,13 +12,13 @@ endmodule : x
 module x;
    initial begin
       startc_c <= (valid && (state == THE_START));
-      end_c    <= (
-                   valid,
-                   (state == THE_END)
-                   );
+      end_c <= (
+                valid,
+                (state == THE_END)
+                );
       valid_c <= { valid ,
-                   (state != IDLE) ,
-                   (state != SKIP_DATA)
+                   (state             != IDLE) ,
+                   (state             != SKIP_DATA)
                    };
    end // initial begin
 endmodule : x
