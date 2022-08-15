@@ -43,3 +43,8 @@ always @(a) g;
 
 
 endmodule // foo
+
+
+// Local Variables:
+// eval: (setq verilog-declaration-typedef-words '("ahb_thingy"))
+// End:
