@@ -11,3 +11,6 @@ custom_type type3;
 
 endmodule
 
+// Local Variables:
+// eval: (setq verilog-declaration-typedef-words '("custom_type"))
+// End:

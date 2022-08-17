@@ -14,4 +14,5 @@ endmodule
 
 // Local Variables:
 // verilog-indent-lists: nil
+// eval: (setq verilog-declaration-typedef-words '("custom_type"))
 // End:

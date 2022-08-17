@@ -1464,6 +1464,11 @@ See also `verilog-case-fold'."
   :group 'verilog-mode-auto
   :type '(choice (const nil) regexp))   ; TODO: Review this, it should be a list option? Add to safe variables?
 
+(defcustom verilog-fontify-variables t
+  "Doc"
+  :group 'verilog-mode-auto
+  :type '(choice (const nil) regexp))   ; TODO: Review this, it should be a list option? Add to safe variables?
+
 (defcustom verilog-mode-hook (list #'verilog-set-compile-command)
   "Hook run after Verilog mode is loaded."
   :type 'hook
@@ -3313,6 +3318,19 @@ See also `verilog-font-lock-extra-types'.")
   "Font lock mode face used to highlight verilog grouping keywords."
   :group 'font-lock-highlighting-faces)
 
+(defvar verilog-font-lock-typedef-face
+  'verilog-font-lock-typedef-face
+  "Font to use for Verilog defined types in declarations.")
+(defface verilog-font-lock-typedef-face
+  '((((class color)
+      (background light))
+     (:foreground "blue")) ; TODO: Choose proper colors
+    (((class color)
+      (background dark))
+     (:foreground "light blue")))
+  "Font lock mode face used to highlight Verilog definde types in declarations."
+  :group 'font-lock-highlighting-faces)
+
 (let* ((verilog-type-font-keywords
         (eval-when-compile
           (verilog-regexp-opt
@@ -3440,6 +3458,17 @@ See also `verilog-font-lock-extra-types'.")
 		   (2 font-lock-constant-face append))
 		 '("\\<function\\>\\s-+\\(\\sw+\\)"
 		   1 'font-lock-constant-face append)
+                 '(verilog-typedef-decl-fontify
+                   (0 'verilog-font-lock-typedef-face)
+                   (1 'font-lock-doc-face))
+                 '(verilog-enum-fontify
+                   (0 'font-lock-builtin-face))
+                 '(verilog-struct-fontify
+                   (0 'font-lock-function-name-face))
+                 '(verilog-modport-fontify
+                   (0 'font-lock-keyword-face)
+                   (1 'font-lock-type-face)
+                   (2 'font-lock-constant-face))
                  ;; Fontify variable names in declarations
                  (list
                   verilog-declaration-re
@@ -3449,7 +3478,10 @@ See also `verilog-font-lock-extra-types'.")
                    ;; Pre-form for this anchored matcher:
                    ;; First, avoid declaration keywords written in comments,
                    ;; which can also trigger this anchor.
-                   '(if (not (verilog-in-comment-p))
+                   '(if (and (not (verilog-in-comment-p))
+                             (not (member (thing-at-point 'symbol) verilog-keywords)) ; Avoid conflicts with 'virtual function ... () etc' that seem like declarations
+                             ;; (not (verilog-at-enum-p)) ; DANGER: Only has an effect in subsequent lines, not at current one. Added unless in `verilog-declaration-varname-matcher'
+                             )
                         (verilog-single-declaration-end verilog-highlight-max-lookahead)
                       (point)) ;; => current declaration statement is of 0 length
                    nil ;; Post-form: nothing to be done
@@ -3756,30 +3788,33 @@ it exists).
 LIMIT is expected to be the pos at which current single-declaration ends,
 obtained using `verilog-single-declaration-end'."
 
-  (let (found-var old-point)
+  (when (and verilog-fontify-variables
+             (not (verilog-at-enum-p))
+             (not (member (thing-at-point 'symbol) verilog-keywords)))
+    (let (found-var old-point)
 
-    ;; Remove starting whitespace
-    (verilog-forward-ws&directives limit)
+      ;; Remove starting whitespace
+      (verilog-forward-ws&directives limit)
 
-    (when (< (point) limit) ;; no matching if this is violated
+      (when (< (point) limit) ;; no matching if this is violated
 
-      ;; Find the variable name (match-data is set here)
-      (setq found-var (re-search-forward verilog-symbol-re limit t))
+        ;; Find the variable name (match-data is set here)
+        (setq found-var (re-search-forward verilog-symbol-re limit t))
 
-      ;; Walk to this variable's delimiter
-      (save-match-data
-        (verilog-forward-ws&directives limit)
-        (setq old-point nil)
-        (while (and (< (point) limit)
-                    (not (member (char-after) '(?, ?\) ?\] ?\} ?\;)))
-                    (not (eq old-point (point))))
-          (setq old-point (point))
+        ;; Walk to this variable's delimiter
+        (save-match-data
           (verilog-forward-ws&directives limit)
-          (forward-sexp)
-          (verilog-forward-ws&directives limit))
-        ;; Only a comma or semicolon expected at this point
-        (skip-syntax-forward "."))
-      found-var)))
+          (setq old-point nil)
+          (while (and (< (point) limit)
+                      (not (member (char-after) '(?, ?\) ?\] ?\} ?\;)))
+                      (not (eq old-point (point))))
+            (setq old-point (point))
+            (verilog-forward-ws&directives limit)
+            (forward-sexp)
+            (verilog-forward-ws&directives limit))
+          ;; Only a comma or semicolon expected at this point
+          (skip-syntax-forward "."))
+        found-var))))
 
 (defun verilog-point-text (&optional pointnum)
   "Return text describing where POINTNUM or current point is (for errors).
@@ -4054,7 +4089,7 @@ Use filename, if current buffer being edited shorten to just buffer name."
          (decl-typedef-re (concat "\\s-*" "\\(" verilog-declaration-prefix-re "\\s-*\\(" verilog-range-re "\\)?" "\\s-*\\)?"
                                   (if words-re
                                       (concat "\\(" verilog-align-typedef-regexp "\\|" words-re "\\)")
-                                    verilog-align-typedef-regexp)
+                                    (concat "\\(" verilog-align-typedef-regexp "\\)")) ; TODO: Check that if words has a value it still is the 5th capture group
                                   "\\(\\s-*" verilog-range-re "\\)?\\s-+"))
          (re (cond ((equal type 'iface-mp)
                     verilog-declaration-or-iface-mp-re)
@@ -4079,13 +4114,101 @@ Use filename, if current buffer being edited shorten to just buffer name."
              (setq re re))))
     re))
 
+(defun verilog-typedef-decl-fontify (limit)
+  ""
+  (let* ((words verilog-declaration-typedef-words)
+         (words-re (when words (verilog-regexp-words words)))
+         (decl-typedef-re (concat "\\s-*" "\\(" verilog-declaration-prefix-re "\\s-*\\(" verilog-range-re "\\)?" "\\s-*\\)?"
+                                  (if words-re
+                                      (concat "\\(" verilog-align-typedef-regexp "\\|" words-re "\\)")
+                                    (concat "\\(" verilog-align-typedef-regexp "\\)")) ; TODO: Check that if words has a value it still is the 5th capture group
+                                  "\\(\\s-*" verilog-range-re "\\)?\\s-+"))
+         start end pos found var-start var-end)
+    (when verilog-fontify-variables
+      (while (and (not found)
+                  (setq pos (verilog-re-search-forward (verilog-get-declaration-re) limit t)))
+        (when (save-excursion
+                (beginning-of-line)
+                (looking-at decl-typedef-re))
+          (setq found t)))
+      (when found
+        ;; (message "0: %s " (match-string 0))
+        ;; (message "1: %s " (match-string 1))
+        ;; (message "2: %s " (match-string 2))
+        ;; (message "3: %s " (match-string 3))
+        ;; (message "4: %s " (match-string 4))
+        ;; (message "5: %s " (match-string 5))
+        (setq start (match-beginning 5)) ; TODO: Check that if words has a value it still is the 5th capture group
+        (setq end (match-end 5))
+        (setq var-start (car (bounds-of-thing-at-point 'symbol)))
+        (setq var-end (cdr (bounds-of-thing-at-point 'symbol)))
+        (set-match-data (list start end var-start var-end))
+        (point)))))
+
+(defun verilog-enum-fontify (limit)
+  ""
+  (let (start end)
+    (when (and verilog-fontify-variables
+               (verilog-re-search-forward verilog-typedef-enum-re limit t)
+               (verilog-at-enum-decl-p)
+               (verilog-re-search-forward "{" (verilog-pos-at-end-of-statement) t))
+      (unless (bobp)
+        (backward-char))
+      (forward-sexp)
+      (verilog-forward-syntactic-ws)
+      (when (thing-at-point 'symbol :noprops)
+        (setq start (car (bounds-of-thing-at-point 'symbol)))
+        (setq end (cdr (bounds-of-thing-at-point 'symbol)))
+        (set-match-data (list start end)))
+      (point))))
+
+(defun verilog-struct-fontify (limit)
+  ""
+  (let (start end)
+    (when (and verilog-fontify-variables
+               (verilog-re-search-forward "{" limit t)
+               (progn
+                 (unless (bobp)
+                   (backward-char))
+                 (verilog-at-struct-p)))
+      (forward-sexp)
+      (verilog-forward-syntactic-ws)
+      (when (thing-at-point 'symbol :noprops)
+        (setq start (car (bounds-of-thing-at-point 'symbol)))
+        (setq end (cdr (bounds-of-thing-at-point 'symbol)))
+        (set-match-data (list start end)))
+      (point))))
+
+(defun verilog-modport-fontify (limit)
+  ""
+  (let (pos-start pos-end start end mp-start mp-end var-start var-end)
+    (when (and verilog-fontify-variables
+               (verilog-re-search-forward verilog-interface-modport-re limit t)
+               (verilog-in-parenthesis-p))
+      (setq pos-start (match-beginning 2))
+      (setq pos-end (match-end 2))
+      (when (thing-at-point 'symbol :noprops)
+        (setq var-start (car (bounds-of-thing-at-point 'symbol)))
+        (setq var-end (cdr (bounds-of-thing-at-point 'symbol))))
+      (goto-char pos-start)
+      (when (thing-at-point 'symbol :noprops)
+        (setq start (car (bounds-of-thing-at-point 'symbol)))
+        (setq end (cdr (bounds-of-thing-at-point 'symbol))))
+      (goto-char pos-end)
+      (when (thing-at-point 'symbol :noprops)
+        (setq mp-start (car (bounds-of-thing-at-point 'symbol)))
+        (setq mp-end (cdr (bounds-of-thing-at-point 'symbol))))
+      (set-match-data (list start end mp-start mp-end var-start var-end))
+      (point))))
+
 (defun verilog-looking-at-decl-to-align ()
   "Return non-nil if pointing at a Verilog variable declaration that must be aligned."
   (let ((re (verilog-get-declaration-re)))
     (and (looking-at re)
          (save-excursion
            (goto-char (match-end 0))
-           (not (looking-at ";")))
+           (and (not (looking-at ";"))
+                (not (member (thing-at-point 'symbol) verilog-keywords)))) ; Fix bug in /home/gonz/.emacs.d/straight/repos/verilog-mode/tests/indent_function.v:39 (that was supposedly fixed already)
          (not (verilog-at-struct-decl-p))
          (not (verilog-at-enum-decl-p)))))
 

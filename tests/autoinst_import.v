@@ -24,4 +24,5 @@ endmodule
 // Local Variables:
 // verilog-library-directories:(".")
 // verilog-library-extensions:(".v" ".sv")
+// eval: (setq verilog-declaration-typedef-words '("svi"))
 // End:

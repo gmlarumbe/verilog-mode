@@ -34,9 +34,9 @@ module foo;
 endmodule // foo
 
 module foo (
-            input  a;
-            input  c;
-            output d;
+            input  a,
+            input  c,
+            output d,
             );
    always @(a) g;
    

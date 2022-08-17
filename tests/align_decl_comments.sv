@@ -84,3 +84,8 @@ logic [1:0] /* embedded comment should NOT get aligned */ t3;
  /* This multiline comment
       should NOT get aligned */
 endmodule
+
+
+// Local Variables:
+// eval: (setq verilog-declaration-typedef-words '("user_type"))
+// End:

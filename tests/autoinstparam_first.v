@@ -3,37 +3,37 @@ module autoinstparam_first ();
    parameter BITSCHANGED;
    parameter BITSA;
    parameter type BITSB_t;
-   typedef [2:0] my_bitsb_t;
+   typedef [2:0] my_bitsb_t;    // TODO: Is there a wire/reg missing?
 
    /* autoinstparam_first_sub AUTO_TEMPLATE (
-       .BITSA		(BITSCHANGED),
+       .BITSA           (BITSCHANGED),
     ); */
 
    autoinstparam_first_sub
      #(/*AUTOINSTPARAM*/)
        sub
-	 (/*AUTOINST*/);
+         (/*AUTOINST*/);
 
    autoinstparam_first_sub
      #(
-       .BITSB_t				(my_bitsb_t),
+       .BITSB_t                         (my_bitsb_t),
        /*AUTOINSTPARAM*/)
        sub1
-	 (/*AUTOINST*/);
+         (/*AUTOINST*/);
 
    autoinstparam_first_sub
      #(
-       .BITSA				(1),
-       .BITSB_t				(my_bitsb_t)
+       .BITSA                           (1),
+       .BITSB_t                         (my_bitsb_t)
        /*AUTOINSTPARAM*/)
        sub2
-	 (/*AUTOINST*/);
+         (/*AUTOINST*/);
 
    autoinstparam_first_sub
      #(
        /*AUTOINSTPARAM*/)
        sub3
-	 (/*AUTOINST*/);
+         (/*AUTOINST*/);
 
 endmodule
 

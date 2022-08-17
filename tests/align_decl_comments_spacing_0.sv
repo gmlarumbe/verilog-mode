@@ -87,5 +87,6 @@ endmodule
 
 // Local Variables:
 // verilog-align-comment-distance: 0
+// eval: (setq verilog-declaration-typedef-words '("user_type"))
 // End:
 
