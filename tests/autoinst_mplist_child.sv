@@ -29,5 +29,6 @@ endmodule
  verilog-typedef-regexp:"_t$"
  verilog-library-directories:(".")
  verilog-library-extensions:(".sv")
+ eval: (setq verilog-align-typedef-regexp (concat "\\<" verilog-identifier-re "_if\\>"))
  End:
  */

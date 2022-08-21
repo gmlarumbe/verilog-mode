@@ -12,10 +12,11 @@ module autoinstparam_first_sub (/*AUTOARG*/
    parameter type  BITSB_t = bit; // See bug340
    
    inout [BITSA:0] a;
-   inout           BITSB_t b;
+   inout BITSB_t   b;
    
 endmodule
 
 // Local Variables:
 // verilog-typedef-regexp: "_t$"
+// eval: (setq verilog-align-typedef-regexp (concat "\\<" verilog-identifier-re "_t\\>"))
 // End:

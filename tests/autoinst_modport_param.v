@@ -17,22 +17,24 @@ module top;
    InstModule instName
      (/*AUTOINST*/
       // Interfaces
-      .svi_modport			(svi_modport.master),
-      .svi_nomodport			(svi_nomodport),
+      .svi_modport                      (svi_modport.master),
+      .svi_nomodport                    (svi_nomodport),
       // Inputs
-      .clk				(clk));
+      .clk                              (clk));
 
     InstModule1 instName1
      (/*AUTOINST*/
       // Interfaces
-      .svi_modport			(svi_modport.master),
-      .svi_nomodport			(svi_nomodport),
+      .svi_modport                      (svi_modport.master),
+      .svi_nomodport                    (svi_nomodport),
       // Inputs
-      .clk				(clk));
-  
+      .clk                              (clk));
+
 endmodule
 
 // Local Variables:
 // verilog-library-directories:(".")
 // verilog-library-extensions:(".v" ".sv")
+// eval: (setq verilog-align-typedef-words '("svi"))
 // End:
+

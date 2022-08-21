@@ -180,4 +180,5 @@ endclass
 
 // Local Variables:
 // verilog-indent-lists: nil
+// eval: (setq verilog-align-typedef-regexp (concat "\\<" verilog-identifier-re "_t\\>"))
 // End:

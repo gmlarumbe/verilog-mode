@@ -89,3 +89,7 @@ endmodule
 // verilog-align-decl-expr-comments: nil
 // End:
 
+
+// Local Variables:
+// eval: (setq verilog-align-typedef-words '("user_type"))
+// End:

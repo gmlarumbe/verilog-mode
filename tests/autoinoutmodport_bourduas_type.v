@@ -27,5 +27,6 @@ interface autoinoutmodport_type_intf(input logic clk, input logic rst_n);
 endinterface
 
 // Local Variables:
-// verilog-typedef-regexp:"_t"
+// verilog-typedef-regexp:"_t$"
+// eval: (setq verilog-align-typedef-regexp (concat "\\<" verilog-identifier-re "_t\\>"))
 // End:

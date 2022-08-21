@@ -25,4 +25,5 @@
         // Local Variables:
         // verilog-typedef-regexp: "_t$"
         // verilog-auto-inst-param-value: t
+        // eval: (setq verilog-align-typedef-regexp (concat "\\<" verilog-identifier-re "_t\\>"))
         // End:

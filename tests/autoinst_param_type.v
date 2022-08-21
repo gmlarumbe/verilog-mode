@@ -85,4 +85,5 @@ endmodule
 // verilog-typedef-regexp: "_[tT]$"
 // verilog-auto-inst-param-value:t
 // verilog-auto-inst-param-value-type:t
+// eval: (setq verilog-align-typedef-regexp (concat "\\<" verilog-identifier-re "_[tT]\\>"))
 // End:

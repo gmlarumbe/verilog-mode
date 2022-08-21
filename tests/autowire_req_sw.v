@@ -16,4 +16,5 @@ endmodule
 // Local Variables:
 // verilog-library-directories:(".")
 // verilog-typedef-regexp:"_t$"
+// eval: (setq verilog-align-typedef-regexp (concat "\\<" verilog-identifier-re "_t\\>"))
 // End:
