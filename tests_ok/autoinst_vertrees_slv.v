@@ -35,3 +35,7 @@ module autoinst_vertrees_slv
    output       i2c_spc_stop;      // From u_spc of i2c_slv_pin_ctrl.v
    
 endmodule // ddc_slv
+
+// Local Variables:
+// verilog-typedef-regexp: "_t$"
+// End:

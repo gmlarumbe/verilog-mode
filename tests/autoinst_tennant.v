@@ -97,7 +97,7 @@ module yy
 endmodule // xx
 
 // Local Variables:
-// verilog-typedef-regexp:"_t$"
+// eval: (setq verilog-typedef-regexp (concat "\\<" verilog-identifier-re "_t\\>"))
 // verilog-library-directories:("." )
 // verilog-library-extensions:(".v" ".sv" ".h" ".vr" ".vm")
 // End:

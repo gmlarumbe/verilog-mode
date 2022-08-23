@@ -17,4 +17,5 @@ endmodule
 
 // Local Variables:
 // verilog-auto-inst-interfaced-ports: nil
+// verilog-typedef-regexp: "_t$"
 // End:

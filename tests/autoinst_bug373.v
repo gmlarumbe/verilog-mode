@@ -43,5 +43,5 @@ module top;
 endmodule // top
 
 // Local Variables:
-// verilog-typedef-regexp: "_s$"
+// eval: (setq verilog-typedef-regexp (concat "\\<" verilog-identifier-re "_s\\>"))
 // End:

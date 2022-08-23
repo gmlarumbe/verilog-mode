@@ -4,21 +4,21 @@ module foo;
    a = c;
    
    typedef struct {
-      reg r;
-      ahb_op_t op; // Read, write, etc.
-      ahb_cycle_type_t cti; // Cycle type for bursts
-      ahb_incr_type_t incr; // Increment type (for bursts)
-      bit b;
-      reg r;
-      ahb_thingy a;
-      bit [31:2] addr;      // Starting address
-      bit [3:0]  byte_sel;  // Byte lane select
-      int        len;       // Length of transfer
-      bit [31:0] data[0:7]; // Write data
+      reg              r;
+      ahb_op_t         op;        // Read, write, etc.
+      ahb_cycle_type_t cti;       // Cycle type for bursts
+      ahb_incr_type_t  incr;      // Increment type (for bursts)
+      bit              b;
+      reg              r;
+      ahb_thingy       a;
+      bit [31:2]       addr;      // Starting address
+      bit [3:0]        byte_sel;  // Byte lane select
+      int              len;       // Length of transfer
+      bit [31:0]       data[0:7]; // Write data
    } ahb_req_t;
    
    struct {
-      reg f;
+      reg   f;
       xyzzy b;
    };
    struct packed {
@@ -34,12 +34,18 @@ module foo;
 endmodule // foo
 
 module foo (
-            input  a;
-            input  c;
-            output d;
+            input  a,
+            input  c,
+            output d,
             );
    always @(a) g;
    
    
    
 endmodule // foo
+
+
+// Local Variables:
+// verilog-typedef-words: ("ahb_thingy" "xyzzy")
+// eval: (setq verilog-typedef-regexp (concat "\\<" verilog-identifier-re "_t\\>"))
+// End:

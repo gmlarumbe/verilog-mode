@@ -35,4 +35,5 @@ endmodule
 // Local Variables:
 // verilog-library-directories:(".")
 // verilog-library-extensions:(".v" ".sv")
+// verilog-typedef-words: ("svi")
 // End:

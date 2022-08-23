@@ -11,7 +11,7 @@ module test
    
    /*AUTOWIRE*/
    // Beginning of automatic wires (for undeclared instantiated-module outputs)
-   tTest                q;                      // From foo of foo.v
+   tTest      q; // From foo of foo.v
    // End of automatics
    
    /* foo AUTO_TEMPLATE (
@@ -26,20 +26,20 @@ module test
             .clk                        (clk),
             .rst                        (rst),
             .tm                         (data_tm));              // Templated
-   /*AUTO_LISP(setq verilog-typedef-regexp "^t[A-Z]")*/
+   /*AUTO_LISP(setq verilog-typedef-regexp (concat "\\<t[A-Z]" verilog-identifier-re "\\>"))*/
 endmodule
 
 module foo
   (
-   input       clk,
-   input       rst,
-   input [7:0] tm,
-   output      tTest q
+   input        clk,
+   input        rst,
+   input [7:0]  tm,
+   output tTest q
    );
 endmodule
 
 // Local Variables:
 // verilog-case-fold:nil
 // verilog-library-directories:(".")
-// verilog-typedef-regexp:"^t[A-Z]"
+// eval: (setq verilog-typedef-regexp (concat "\\<t[A-Z]" verilog-identifier-re "\\>"))
 // End:

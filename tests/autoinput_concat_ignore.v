@@ -53,4 +53,5 @@ endmodule // def
 
 // Local Variables:
 // verilog-auto-ignore-concat: t
+// verilog-typedef-regexp: "_t$"
 // End:

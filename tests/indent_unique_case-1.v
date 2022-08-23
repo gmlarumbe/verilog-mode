@@ -364,3 +364,6 @@ endmodule // xxx_xxxxxx
 
 
 
+// Local Variables:
+// eval: (setq verilog-typedef-regexp (concat "\\<" verilog-identifier-re "_e\\>"))
+// End:

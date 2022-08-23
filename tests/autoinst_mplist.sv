@@ -48,5 +48,6 @@ endmodule
  verilog-typedef-regexp:"_t$"
  verilog-library-directories:(".")
  verilog-library-extensions:(".sv")
+ verilog-typedef-words: ("mbl_if")
  End:
  */

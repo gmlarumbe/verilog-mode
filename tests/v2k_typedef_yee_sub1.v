@@ -25,5 +25,5 @@ module v2k_typedef_yee_sub1
 endmodule
 
 // Local Variables:
-// verilog-typedef-regexp: "_t$"
+// eval: (setq verilog-typedef-regexp (concat "\\<" verilog-identifier-re "_t\\>"))
 // End:

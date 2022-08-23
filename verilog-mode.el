@@ -1448,6 +1448,12 @@ See also `verilog-case-fold'."
   :type '(choice (const nil) regexp))
 (put 'verilog-typedef-regexp 'safe-local-variable #'stringp)
 
+(defcustom verilog-typedef-words nil
+  "List of words that match user typedefs for declaration alignment."
+  :group 'verilog-mode-indent
+  :type '(repeat string))
+(put 'verilog-typedef-words 'safe-local-variable #'listp)
+
 (defcustom verilog-mode-hook (list #'verilog-set-compile-command)
   "Hook run after Verilog mode is loaded."
   :type 'hook
@@ -4017,22 +4023,68 @@ Use filename, if current buffer being edited shorten to just buffer name."
 (defun verilog-declaration-beg ()
   (verilog-re-search-backward (verilog-get-declaration-re) (bobp) t))
 
+(defun verilog-align-typedef-enabled-p ()
+  "Return non-nil if alignment of user typedefs is enabled.
+This will be automatically set when either `verilog-typedef-regexp'
+is specified in its complete form (i.e. including `verilog-identifier-re')
+or `verilog-typedef-words' is non-nil."
+  (when (or (and verilog-typedef-regexp
+                 (save-match-data
+                   (string-match (regexp-quote verilog-identifier-re) verilog-typedef-regexp)))
+            verilog-typedef-words)
+    t))
+
+(defun verilog-get-declaration-typedef-re ()
+  "Return regexp of a user defined typedef.
+See `verilog-typedef-regexp' and `verilog-typedef-words'."
+  (let (typedef-re words words-re re)
+    (when (verilog-align-typedef-enabled-p)
+      (setq typedef-re verilog-typedef-regexp)
+      (setq words verilog-typedef-words)
+      (setq words-re (verilog-regexp-words verilog-typedef-words))
+      (cond ((and typedef-re (not words))
+             (setq re typedef-re))
+            ((and (not typedef-re) words)
+             (setq re words-re))
+            ((and typedef-re words)
+             (setq re (concat verilog-typedef-regexp "\\|" words-re))))
+      (concat "\\s-*" "\\(" verilog-declaration-prefix-re "\\s-*\\(" verilog-range-re "\\)?" "\\s-*\\)?"
+              (concat "\\(" re "\\)")
+              "\\(\\s-*" verilog-range-re "\\)?\\s-+"))))
+
 (defun verilog-get-declaration-re (&optional type)
   "Return declaration regexp depending on customizable variables and TYPE."
-  (cond ((equal type 'iface-mp)
-         verilog-declaration-or-iface-mp-re)
-        ((equal type 'embedded-comments)
-         verilog-declaration-embedded-comments-re)
-        (verilog-indent-declaration-macros
-         verilog-declaration-re-macro)
-        (t
-         verilog-declaration-re)))
+  (let ((re (cond ((equal type 'iface-mp)
+                   verilog-declaration-or-iface-mp-re)
+                  ((equal type 'embedded-comments)
+                   verilog-declaration-embedded-comments-re)
+                  (verilog-indent-declaration-macros
+                   verilog-declaration-re-macro)
+                  (t
+                   verilog-declaration-re))))
+    (when (and (verilog-align-typedef-enabled-p)
+               (or (string= re verilog-declaration-or-iface-mp-re)
+                   (string= re verilog-declaration-re)))
+      (setq re (concat "\\(" (verilog-get-declaration-typedef-re) "\\)\\|\\(" re "\\)")))
+    re))
 
 (defun verilog-looking-at-decl-to-align ()
   "Return non-nil if pointing at a Verilog variable declaration that must be aligned."
-  (and (looking-at (verilog-get-declaration-re))
-       (not (verilog-at-struct-decl-p))
-       (not (verilog-at-enum-decl-p))))
+  (let* ((re (verilog-get-declaration-re))
+         (valid-re (looking-at re))
+         (id-pos (match-end 0)))
+    (and valid-re
+         (not (verilog-at-struct-decl-p))
+         (not (verilog-at-enum-decl-p))
+         (save-excursion
+           (goto-char id-pos)
+           (verilog-forward-syntactic-ws)
+           (and (not (looking-at ";"))
+                (not (member (thing-at-point 'symbol) verilog-keywords))
+                (progn ; Avoid alignment of instances whose name match user defined types
+                  (forward-word)
+                  (verilog-forward-syntactic-ws)
+                  (not (looking-at "("))))))))
 
 ;;; Mode:
 ;;
@@ -15376,6 +15428,7 @@ Files are checked based on `verilog-library-flags'."
        verilog-tab-always-indent
        verilog-tab-to-comment
        verilog-typedef-regexp
+       verilog-typedef-words
        verilog-warn-fatal
        )
      nil nil

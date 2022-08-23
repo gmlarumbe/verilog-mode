@@ -26,7 +26,7 @@ module test
 	    .clk			(clk),
 	    .rst			(rst),
 	    .tm				(data_tm));		 // Templated
-   /*AUTO_LISP(setq verilog-typedef-regexp "^t[A-Z]")*/
+   /*AUTO_LISP(setq verilog-typedef-regexp (concat "\\<t[A-Z]" verilog-identifier-re "\\>"))*/
 endmodule
 
 module foo
@@ -41,5 +41,5 @@ endmodule
 // Local Variables:
 // verilog-case-fold:nil
 // verilog-library-directories:(".")
-// verilog-typedef-regexp:"^t[A-Z]"
+// eval: (setq verilog-typedef-regexp (concat "\\<t[A-Z]" verilog-identifier-re "\\>"))
 // End:

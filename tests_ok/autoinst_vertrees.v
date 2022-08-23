@@ -124,3 +124,8 @@ module autoinst_vertrees
       .test_mode                                (test_mode));
    
 endmodule // ddc
+
+// Local Variables:
+// verilog-typedef-regexp: "_t$"
+// End:
+

@@ -249,3 +249,9 @@ class my_xactor extends vmm_xactor;
    `vmm_xactor_member_end(my_xactor)
    
 endclass: my_xactor
+
+
+// Local Variables:
+// eval: (setq verilog-typedef-regexp (concat "\\<\\(e\\|t\\|vmm\\)_" verilog-identifier-re "\\>"))
+// End:
+

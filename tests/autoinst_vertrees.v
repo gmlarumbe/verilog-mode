@@ -21,3 +21,8 @@ module autoinst_vertrees
     (/*AUTOINST*/); 
 
 endmodule // ddc
+
+// Local Variables:
+// verilog-typedef-regexp: "_t$"
+// End:
+

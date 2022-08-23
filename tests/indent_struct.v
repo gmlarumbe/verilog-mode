@@ -34,12 +34,18 @@ int a; // woops
 endmodule // foo
 
 module foo (
-input a;
-input c;
-output d;
+input a,
+input c,
+output d,
 );
 always @(a) g;
 
 
 
 endmodule // foo
+
+
+// Local Variables:
+// verilog-typedef-words: ("ahb_thingy" "xyzzy")
+// eval: (setq verilog-typedef-regexp (concat "\\<" verilog-identifier-re "_t\\>"))
+// End:

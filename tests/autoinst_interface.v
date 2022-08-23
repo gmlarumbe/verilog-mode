@@ -48,3 +48,8 @@ module top;
 				   .reset		(reset),
 				   .start		(start));
 endmodule
+
+
+// Local Variables:
+// verilog-typedef-words: ("my_svi")
+// End:

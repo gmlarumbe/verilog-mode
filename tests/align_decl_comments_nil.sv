@@ -87,5 +87,6 @@ endmodule
 
 // Local Variables:
 // verilog-align-decl-expr-comments: nil
+// verilog-typedef-words: ("user_type")
 // End:
 
