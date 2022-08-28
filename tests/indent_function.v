@@ -48,3 +48,8 @@ class base_test extends uvm_test;
       super.start_of_simulation_phase(phase);
    endfunction : start_of_simulation_phase
 endclass : base_test
+
+
+// Local Variables:
+// eval: (setq verilog-typedef-regexp (concat "\\<" verilog-identifier-re "_if\\>"))
+// End:

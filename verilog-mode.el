@@ -920,6 +920,12 @@ always be saved."
   :type 'boolean)
 (put 'verilog-auto-star-save 'safe-local-variable #'verilog-booleanp)
 
+(defcustom verilog-fontify-variables t
+  "Non-nil means fontify declaration variables."
+  :group 'verilog-mode-actions
+  :type 'boolean)
+(put 'verilog-fontify-variables 'safe-local-variable #'verilog-booleanp)
+
 (defvar verilog-auto-update-tick nil
   "Modification tick at which autos were last performed.")
 
@@ -2871,10 +2877,11 @@ find the errors."
   (concat "\\s-*\\(\\<\\(reg\\|wire\\)\\>\\s-*\\)?\\(\\<\\(un\\)?signed\\>\\s-*\\)?\\(" verilog-range-re "\\)?"))
 (defconst verilog-macroexp-re "`\\sw+")
 (defconst verilog-delay-re "#\\s-*\\(\\([0-9_]+\\('s?[hdxbo][0-9a-fA-F_xz]+\\)?\\)\\|\\(([^()]*)\\)\\|\\(\\sw+\\)\\)")
-(defconst verilog-interface-modport-re "\\(\\s-*\\([a-zA-Z0-9`_$]+\\.[a-zA-Z0-9`_$]+\\)[ \t\f]+\\)")
+(defconst verilog-interface-modport-re "\\(\\s-*\\([a-zA-Z0-9`_$]+\\)\\.\\([a-zA-Z0-9`_$]+\\)[ \t\f]+\\)")
 (defconst verilog-comment-start-regexp "//\\|/\\*" "Dual comment value for `comment-start-regexp'.")
 (defconst verilog-typedef-enum-re
   (concat "^\\s-*\\(typedef\\s-+\\)?enum\\(\\s-+" verilog-declaration-core-re "\\s-*" verilog-optional-signed-range-re "\\)?"))
+(defconst verilog-typedef-struct-re "^\\s-*\\(typedef\\s-+\\)?\\(struct\\|union\\)\\s-+\\(packed\\|\\(un\\)?signed\\)?")
 
 (defconst verilog-declaration-simple-re
   (concat "\\(" verilog-declaration-prefix-re "\\s-*\\)?" verilog-declaration-core-re))
@@ -3289,6 +3296,19 @@ See also `verilog-font-lock-extra-types'.")
   "Font lock mode face used to highlight verilog grouping keywords."
   :group 'font-lock-highlighting-faces)
 
+(defvar verilog-font-lock-typedef-face
+  'verilog-font-lock-typedef-face
+  "Font to use for Verilog defined types in declarations.")
+(defface verilog-font-lock-typedef-face
+  '((((class color)
+      (background light))
+     (:foreground "blue")) ; TODO: Choose proper colors
+    (((class color)
+      (background dark))
+     (:foreground "light blue"))) ; TODO: Choose proper colors
+  "Font lock mode face used to highlight Verilog definde types in declarations."
+  :group 'font-lock-highlighting-faces)
+
 (let* ((verilog-type-font-keywords
         (eval-when-compile
           (verilog-regexp-opt
@@ -3403,7 +3423,7 @@ See also `verilog-font-lock-extra-types'.")
 		(list
 		 ;; Fontify module definitions
 		 (list
-                 "\\<\\(\\(macro\\|connect\\)?module\\|primitive\\|class\\|program\\|interface\\|package\\|task\\)\\>\\s-*\\(\\sw+\\)"
+                  "\\<\\(\\(macro\\|connect\\)?module\\|primitive\\|class\\|program\\|interface\\|package\\|task\\)\\>\\s-*\\(\\sw+\\)"
 		  '(1 font-lock-keyword-face)
 		  '(3 font-lock-function-name-face))
 		 ;; Fontify function definitions
@@ -3416,6 +3436,31 @@ See also `verilog-font-lock-extra-types'.")
 		   (2 font-lock-constant-face append))
 		 '("\\<function\\>\\s-+\\(\\sw+\\)"
 		   1 'font-lock-constant-face append)
+                 ;; Fontify user types declarations
+                 '(verilog-typedef-decl-fontify
+                   (0 'verilog-font-lock-typedef-face)
+                   (1 'font-lock-doc-face)) ; TODO: Choose proper colors
+                 ;; Fontify modport interfaces in port lists
+                 '(verilog-modport-fontify ; TODO: Choose proper colors
+                   (0 'font-lock-keyword-face)
+                   (1 'font-lock-type-face)
+                   (2 'font-lock-constant-face))
+                 ;; Fontify (typedef) enum vars
+                 (list
+                  'verilog-enum-fontify-anchor
+                  (list
+                   verilog-identifier-sym-re
+                   '(verilog-pos-at-end-of-statement)
+                   nil
+                   '(0 'font-lock-builtin-face))) ; TODO: Choose proper colors
+                 ;; Fontify (typedef) struct vars
+                 (list
+                  'verilog-struct-fontify-anchor
+                  (list
+                   verilog-identifier-sym-re
+                   nil
+                   nil
+                   '(0 'font-lock-builtin-face))) ; TODO: Choose proper colors
                  ;; Fontify variable names in declarations
                  (list
                   verilog-declaration-re
@@ -3425,12 +3470,15 @@ See also `verilog-font-lock-extra-types'.")
                    ;; Pre-form for this anchored matcher:
                    ;; First, avoid declaration keywords written in comments,
                    ;; which can also trigger this anchor.
-                   '(if (not (verilog-in-comment-p))
+                   '(if (and (not (verilog-in-comment-p))
+                             (not (member (thing-at-point 'symbol) verilog-keywords)) ; Avoid conflicts with 'virtual function ... () etc' that seem like declarations
+                             ;; (not (verilog-at-enum-p)) ; DANGER: Only has an effect in subsequent lines, not at current one. Added unless in `verilog-declaration-varname-matcher'
+                             ;; (not (verilog-at-struct-p)) ; DANGER: Only has an effect in subsequent lines, not at current one. Added unless in `verilog-declaration-varname-matcher'
+                             )
                         (verilog-single-declaration-end verilog-highlight-max-lookahead)
                       (point)) ;; => current declaration statement is of 0 length
                    nil ;; Post-form: nothing to be done
-                   '(0 font-lock-variable-name-face nil t)))
-                )))
+                   '(0 font-lock-variable-name-face))))))
 
 
   (setq verilog-font-lock-keywords-2
@@ -3731,31 +3779,91 @@ This function moves POINT to the next variable within the same declaration (if
 it exists).
 LIMIT is expected to be the pos at which current single-declaration ends,
 obtained using `verilog-single-declaration-end'."
-
-  (let (found-var old-point)
-
-    ;; Remove starting whitespace
-    (verilog-forward-ws&directives limit)
-
-    (when (< (point) limit) ;; no matching if this is violated
-
-      ;; Find the variable name (match-data is set here)
-      (setq found-var (re-search-forward verilog-identifier-sym-re limit t))
-
-      ;; Walk to this variable's delimiter
-      (save-match-data
-        (verilog-forward-ws&directives limit)
-        (setq old-point nil)
-        (while (and (< (point) limit)
-                    (not (member (char-after) '(?, ?\) ?\] ?\} ?\;)))
-                    (not (eq old-point (point))))
-          (setq old-point (point))
+  (when (and verilog-fontify-variables
+             (not (verilog-at-enum-p))
+             (not (verilog-at-struct-p))
+             (not (member (thing-at-point 'symbol) verilog-keywords)))
+    (let (found-var old-point)
+      ;; Remove starting whitespace
+      (verilog-forward-ws&directives limit)
+      (when (< (point) limit) ;; no matching if this is violated
+        ;; Find the variable name (match-data is set here)
+        (setq found-var (re-search-forward verilog-identifier-sym-re limit t))
+        ;; Walk to this variable's delimiter
+        (save-match-data
           (verilog-forward-ws&directives limit)
-          (forward-sexp)
-          (verilog-forward-ws&directives limit))
-        ;; Only a comma or semicolon expected at this point
-        (skip-syntax-forward "."))
-      found-var)))
+          (setq old-point nil)
+          (while (and (< (point) limit)
+                      (not (member (char-after) '(?, ?\) ?\] ?\} ?\;)))
+                      (not (eq old-point (point))))
+            (setq old-point (point))
+            (verilog-forward-ws&directives limit)
+            (forward-sexp)
+            (verilog-forward-ws&directives limit))
+          ;; Only a comma or semicolon expected at this point
+          (skip-syntax-forward "."))
+        found-var))))
+
+(defun verilog-typedef-decl-fontify (limit)
+  "Fontify typedef declarations."
+  (let* ((decl-typedef-re (verilog-get-declaration-typedef-re))
+         start end found var-start var-end)
+    (when (and verilog-fontify-variables
+               (verilog-align-typedef-enabled-p))
+      (while (and (not found)
+                  ;; (verilog-re-search-forward (verilog-get-declaration-re) limit t))
+                  (verilog-re-search-forward decl-typedef-re limit t))
+        (when (save-excursion
+                (beginning-of-line)
+                (looking-at decl-typedef-re))
+          (setq found t)))
+      (when found
+        (setq start (match-beginning 5))
+        (setq end (match-end 5))
+        (setq var-start (car (bounds-of-thing-at-point 'symbol)))
+        (setq var-end (cdr (bounds-of-thing-at-point 'symbol)))
+        (set-match-data (list start end var-start var-end))
+        (point)))))
+
+(defun verilog-modport-fontify (limit)
+  "Fontify interface modport declarations."
+  (let (if-start if-end mp-start mp-end var-start var-end)
+    (when (and verilog-fontify-variables
+               (verilog-re-search-forward verilog-interface-modport-re limit t)
+               (verilog-in-parenthesis-p))
+      (setq if-start (match-beginning 2))
+      (setq if-end (match-end 2))
+      (setq mp-start (match-beginning 3))
+      (setq mp-end (match-end 3))
+      ;; Calculate variable pos at the end since `thing-at-point' changes match-data
+      (setq var-start (car (bounds-of-thing-at-point 'symbol)))
+      (setq var-end (cdr (bounds-of-thing-at-point 'symbol)))
+      (set-match-data (list if-start if-end mp-start mp-end var-start var-end))
+      (point))))
+
+(defun verilog-enum-fontify-anchor (limit)
+  "Fontify enum declaration anchor."
+  (when (and verilog-fontify-variables
+             (verilog-re-search-forward verilog-typedef-enum-re limit t)
+             (progn (verilog-forward-syntactic-ws)
+                    (looking-at "{"))
+             (progn (ignore-errors (forward-sexp))
+                    (backward-char)
+                    (looking-at "}")))
+    (forward-char)
+    (point)))
+
+(defun verilog-struct-fontify-anchor (limit)
+  "Fontify struct declarations."
+  (when (and verilog-fontify-variables
+             (verilog-re-search-forward verilog-typedef-struct-re limit t)
+             (verilog-re-search-forward "{" limit t)
+             (progn (backward-char)
+                    (ignore-errors (forward-sexp))
+                    (backward-char)
+                    (looking-at "}")))
+    (forward-char)
+    (point)))
 
 (defun verilog-point-text (&optional pointnum)
   "Return text describing where POINTNUM or current point is (for errors).
@@ -15398,6 +15506,7 @@ Files are checked based on `verilog-library-flags'."
        verilog-compiler
        verilog-coverage
        verilog-delete-auto-hook
+       verilog-fontify-variables
        verilog-getopt-flags-hook
        verilog-highlight-grouping-keywords
        verilog-highlight-includes
