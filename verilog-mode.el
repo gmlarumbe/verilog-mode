@@ -1533,6 +1533,8 @@ If set will become buffer local.")
     (define-key map "\M-\C-e"  #'verilog-end-of-defun)
     (define-key map "\M-\C-u"  #'verilog-defun-level-up)
     (define-key map "\M-\C-d"  #'verilog-defun-level-down)
+    (define-key map "\M-\C-n"  #'verilog-defun-same-level-next)
+    (define-key map "\M-\C-p"  #'verilog-defun-same-level-prev)
     (define-key map "\C-c\C-d" #'verilog-goto-defun)
     (define-key map "\C-c\C-k" #'verilog-delete-auto)
     (define-key map "\C-c\C-a" #'verilog-auto)
@@ -4653,34 +4655,98 @@ area.  See also `verilog-comment-region'."
   ;; Order of conditions is relevant here
   (cond ((or (verilog-in-function-p)
              (verilog-in-task-p))
-         (verilog-re-search-backward (concat "\\(function\\|task\\)") nil 'move))
+         (verilog-re-search-backward (concat "\\<\\(function\\|task\\)\\>") nil 'move))
         ((verilog-in-class-p)
-         (verilog-re-search-backward "class" nil 'move))
+         (verilog-re-search-backward "\\<class\\>" nil 'move))
         ((verilog-in-package-p)
-         (verilog-re-search-backward "package" nil 'move))
+         (verilog-re-search-backward "\\<package\\>" nil 'move))
         ((or (verilog-in-module-p)
              (verilog-in-program-p)
              (verilog-in-interface-p))
-         (verilog-re-search-backward (concat "\\(module\\|program\\|interface\\)") nil 'move))
+         (verilog-re-search-backward (concat "\\<\\(module\\|program\\|interface\\)\\>") nil 'move))
         (t
          nil)))
 
 (defun verilog-defun-level-down (&optional arg)
   "Move down one defun-level."
   (interactive)
-  ;; Order of conditions is relevant here
-  (cond ((or (verilog-in-function-p)
-             (verilog-in-task-p))
-         nil)
-        ((verilog-in-class-p)
-         (verilog-re-search-forward (concat "\\(function\\|task\\)") nil 'move))
-        ((verilog-in-package-p)
-         (verilog-re-search-forward "class" nil 'move))
-        ((or (verilog-in-module-p)
-             (verilog-in-program-p))
-         (verilog-re-search-forward (concat "\\(function\\|task\\)") nil 'move))
-        (t
-         nil)))
+  (let (limit)
+    ;; Order of conditions is relevant here
+    (cond ((or (verilog-in-function-p :x)
+               (verilog-in-task-p :x))
+           nil)
+          ((verilog-in-class-p :x)
+           (setq limit (verilog-re-search-forward-try (concat "\\<endclass\\>") nil 'move :only-pos))
+           (verilog-re-search-forward-try (concat "\\<\\(function\\|task\\)\\>") limit 'move))
+          ((verilog-in-package-p :x)
+           (setq limit (verilog-re-search-forward-try (concat "\\<endpackage\\>") nil 'move :only-pos))
+           (verilog-re-search-forward-try "\\<class\\>" limit 'move))
+          ((or (verilog-in-module-p :x)
+               (verilog-in-program-p :x)
+               (verilog-in-interface-p :x))
+           (setq limit (verilog-re-search-forward-try (concat "\\<end\\(package\\|module\\|interface\\)\\>") nil 'move :only-pos))
+           (verilog-re-search-forward-try (concat "\\<\\(function\\|task\\)\\>") limit 'move))
+          (t
+           nil))))
+
+(defun verilog-defun-same-level-next ()
+  ""
+  (interactive)
+  (let (limit)
+    ;; Order of conditions is relevant here
+    (cond (;; Functions/task inside task/module/package/interface/program
+           (or (verilog-in-function-p :x)
+               (verilog-in-task-p :x))
+           (when (looking-at (concat "\\<\\(function\\|task\\)\\>"))
+             (forward-word))
+           (setq limit (verilog-re-search-forward-try (concat "\\<end\\(class\\|package\\|module\\|interface\\|program\\)\\>") nil 'move :only-pos))
+           (verilog-re-search-forward-try (concat "\\<\\(function\\|task\\)\\>") limit 'move)) ; TODO: Add static, protected, etc.. tags
+          (;; Classes inside package
+           (verilog-in-class-p :x)
+           (when (looking-at (concat "\\<class\\>"))
+             (forward-word))
+           (setq limit (verilog-re-search-forward-try (concat "\\<endpackage\\>") nil 'move :only-pos))
+           (verilog-re-search-forward-try "\\<class\\>" limit 'move))
+          (;; Package (top)
+           (verilog-in-package-p :x)
+           (when (looking-at (concat "\\<package\\>"))
+             (forward-word))
+           (verilog-re-search-forward-try "\\<package\\>" nil 'move))
+          (;; Module/program/interface
+           (or (verilog-in-module-p :x)
+               (verilog-in-program-p :x)
+               (verilog-in-interface-p :x))
+           (when (looking-at (concat "\\<\\(module\\|program\\|interface\\)\\>"))
+             (forward-word))
+           (verilog-re-search-forward-try (concat "\\<\\(module\\|program\\|interface\\)\\>") nil 'move))
+          (t
+           nil))))
+  
+(defun verilog-defun-same-level-prev ()
+  ""
+  (interactive)
+  ;; TODO: Do it analogously to 'prev' function
+  )
+
+(defun verilog-re-search-forward-try (REGEXP BOUND NOERROR &optional ONLY-POS)
+  "Return to origin if search failed.
+Move to the beginning of match if found.
+Return pos if ONLY-POS is non nil."
+  (interactive)
+  (let (found)
+    (save-excursion
+      (when (verilog-re-search-forward REGEXP BOUND NOERROR)
+        (setq found (point))))
+    (cond (;; Found but return only position
+           (and found (not ONLY-POS))
+           (goto-char (match-beginning 0)))
+          ;; Found and move
+          ((and found ONLY-POS)
+           (match-beginning 0))
+          ;; Not found
+          (t
+           nil))))
+
 
 (defun verilog-beg-of-defun-quick ()
   "Move backward to the beginning of the current function or procedure.
@@ -6699,7 +6765,7 @@ Optional BOUND limits search."
 	      (if jump
 		  (beginning-of-line 2))))))))
 
-(defun verilog-in-construct-p (opener)
+(defun verilog-in-construct-p (opener &optional x)
   "Return non-nil if point is inside construct started by OPENER.
 Supported constructs depend on correct behavior of `verilog-forward-sexp'."
   (let ((supported-constructs '("function" "task" "class" "module" "package" "interface" "program"))
@@ -6713,36 +6779,38 @@ Supported constructs depend on correct behavior of `verilog-forward-sexp'."
         (setq beg (point))
         (when (verilog-forward-sexp)
           (setq end (point))
-          (and (>= pos beg)
+          (and (if x
+                   (>= pos beg)
+                 (> pos beg))
                (< pos end)))))))
 
-(defun verilog-in-function-p ()
+(defun verilog-in-function-p (&optional x)
   "docstring"
-  (verilog-in-construct-p "function"))
+  (verilog-in-construct-p "function" x))
 
-(defun verilog-in-task-p ()
+(defun verilog-in-task-p (&optional x)
   "docstring"
-  (verilog-in-construct-p "task"))
+  (verilog-in-construct-p "task" x))
 
-(defun verilog-in-class-p ()
+(defun verilog-in-class-p (&optional x)
   "docstring"
-  (verilog-in-construct-p "class"))
+  (verilog-in-construct-p "class" x))
 
-(defun verilog-in-package-p ()
+(defun verilog-in-package-p (&optional x)
   "docstring"
-  (verilog-in-construct-p "package"))
+  (verilog-in-construct-p "package" x))
 
-(defun verilog-in-interface-p ()
+(defun verilog-in-interface-p (&optional x)
   "docstring"
-  (verilog-in-construct-p "interface"))
+  (verilog-in-construct-p "interface" x))
 
-(defun verilog-in-module-p ()
+(defun verilog-in-module-p (&optional x)
   "docstring"
-  (verilog-in-construct-p "module"))
+  (verilog-in-construct-p "module" x))
 
-(defun verilog-in-program-p ()
+(defun verilog-in-program-p (&optional x)
   "docstring"
-  (verilog-in-construct-p "program"))
+  (verilog-in-construct-p "program" x))
 
 (defun verilog-in-comment-p ()
   "Return true if in a star or // comment."
