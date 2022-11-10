@@ -7341,7 +7341,7 @@ Do not count named blocks or case-statements."
                  (and (looking-at verilog-assignment-operation-re)
                       (save-excursion
                         (goto-char (match-beginning 2))
-                        (not (equal (face-at-point) 'font-lock-string-face)))
+                        (not (verilog-within-string)))
                       (progn (verilog-forward-syntactic-ws)
                              (not (looking-at verilog-complete-re)))))
                (goto-char (match-end 2))
@@ -7355,12 +7355,14 @@ Do not count named blocks or case-statements."
                (if (> (verilog-pos-at-forward-syntactic-ws) (point-at-eol))
                    (+ (verilog-col-at-beg-of-statement) verilog-indent-level)
                  (verilog-col-at-forward-syntactic-ws)))
-              (;; 6) Long reporting strings (e.g. $sformatf inside `uvm_info or $display)
+              (;; 6) Long reporting strings (e.g. $display or $sformatf inside `uvm_info)
                (save-excursion
                  (goto-char start-pos)
-                 (verilog-continued-line)
-                 (eq (following-char) ?\")
-                 (setq pos (point)))
+                 (verilog-backward-up-list 1)
+                 (setq pos (1+ (point)))
+                 (backward-word)
+                 (or (looking-at (concat "$" verilog-identifier-re))
+                     (looking-at verilog-uvm-statement-re)))
                (goto-char pos)
                (current-column))
               (t ;; 7) Default
